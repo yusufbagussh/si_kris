@@ -62,7 +62,6 @@ class QRISService
             ]);
 
             //return $response->json()['accessToken'];
-            $this->saveAccessToken($response->json());
             if ($response->successful()) {
                 $data = $response->json();
 
@@ -133,10 +132,8 @@ class QRISService
         return $response->json();
     }
 
-    public function inquiryPayment($originalReferenceNo)
+    public function inquiryPayment($token, $originalReferenceNo)
     {
-        $token = $this->getAccessTokenFromDB() ?? $this->getAccessToken();
-
         $timestamp = $this->timeStamp;
         $endpoint = "/snap/v1.1/qr/qr-mpm-query";
 

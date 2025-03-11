@@ -178,7 +178,7 @@ class QRISNotifyController extends Controller
                     'responseMessage' => 'Invalid Field Format: timestamp must be in ISO 8601 format'
                 ], 400);
             }
-            
+
             $validatorExternalID = Validator::make($request->header(), [
                 'x-external-id' => 'unique:qris_notifications,external_id',
             ]);
@@ -236,6 +236,15 @@ class QRISNotifyController extends Controller
                     'responseCode' => '4005201',
                     'responseMessage' => 'Invalid Field Format: ' . implode(', ', $validator->errors()->all())
                 ], 400);
+            }
+
+            $transaction = QrisTransaction::where('partner_reference_no', $request->originalPartnerReferenceNo)->first();
+
+            if ($transaction == null) {
+                return response()->json([
+                    'responseCode' => '4045200',
+                    'responseMessage' => 'Transaction Not Found. Invalid Number'
+                ], 404);
             }
 
             $headers = [

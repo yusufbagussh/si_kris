@@ -27,8 +27,8 @@ Route::get('/inquiry', function () {
     return view('qris.inquiry');
 });
 
-Route::post('/qris/generate-qr', [QRISController::class, 'generateQrPatient'])->name('qris.generate-qr');
-Route::post('/qris/query-payment', [QRISController::class, 'inquiryPaymentPatient'])->name('qris.query-payment');
+Route::post('/snap/qris/generate-qr', [QRISController::class, 'generateQrPatient'])->name('qris.generate-qr');
+Route::post('/snap/qris/query-payment', [QRISController::class, 'inquiryPaymentPatient'])->name('qris.query-payment');
 
 
 Route::post('/snap/v1.0/access-token/b2b', [QRISNotifyController::class, 'generateToken']);
