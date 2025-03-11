@@ -237,6 +237,7 @@ class QRISNotifyController extends Controller
                     'responseMessage' => 'Invalid Field Format: ' . implode(', ', $validator->errors()->all())
                 ], 400);
             }
+
             $headers = [
                 'x-signature' => $request->header('x-signature') ?? null,
                 'x-timestamp' => $request->header('x-timestamp') ?? null,

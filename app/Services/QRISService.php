@@ -368,7 +368,6 @@ class QRISService
         // Find transaction by reference number
         $transaction = QrisTransaction::where('reference_no', $referenceNo)->first();
         if (!$transaction) {
-
         }
 
         if ($transaction) {
@@ -477,5 +476,4 @@ class QRISService
             'X-SIGNATURE' => $signature,
         ];
     }
-
 }
