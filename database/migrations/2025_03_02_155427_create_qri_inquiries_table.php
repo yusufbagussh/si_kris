@@ -10,9 +10,9 @@ return new class extends Migration {
      */
     public function up(): void
     {
-        Schema::create('bri.qris_inquiries', function (Blueprint $table) {
+        Schema::create('qris_inquiries', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('qris_transaction_id')->nullable()->after('id')->constrained('bri.qris_transactions');
+            $table->foreignId('qris_transaction_id')->nullable()->constrained('qris_transactions');
             $table->string('reference_no');
             $table->string('terminal_id');
             $table->string('response_code');

@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class QrisBriToken extends Model
 {
-    protected $table = 'bri.qris_bri_tokens';
+    protected $table = 'qris_bri_tokens';
 
     use HasFactory;
 

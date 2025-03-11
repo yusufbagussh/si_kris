@@ -10,9 +10,9 @@ return new class extends Migration {
      */
     public function up(): void
     {
-        Schema::create('bri.transactions', function (Blueprint $table) {
+        Schema::create('transactions', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('patient_id')->nullable()->after('id')->constrained('bri.patients');
+            $table->foreignId('patient_id')->nullable()->constrained('patients');
             $table->string('invoice_number')->unique();
             $table->decimal('amount', 20, 2);
             $table->string('description')->nullable();
@@ -32,6 +32,6 @@ return new class extends Migration {
      */
     public function down(): void
     {
-        Schema::dropIfExists('bri.transactions');
+        Schema::dropIfExists('transactions');
     }
 };

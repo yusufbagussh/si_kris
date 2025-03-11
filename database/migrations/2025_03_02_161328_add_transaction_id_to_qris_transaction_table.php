@@ -10,9 +10,9 @@ return new class extends Migration {
      */
     public function up(): void
     {
-        Schema::table('bri.qris_transactions', function (Blueprint $table) {
+        Schema::table('qris_transactions', function (Blueprint $table) {
             // Add the foreign key to hospital_transactions
-            $table->foreignId('transaction_id')->nullable()->after('id')->constrained('bri.transactions');
+            $table->foreignId('transaction_id')->nullable()->constrained('transactions');
 
             // Add expiry time field for QR
             $table->timestamp('expires_at')->nullable()->after('last_inquiry_at'); //2menit

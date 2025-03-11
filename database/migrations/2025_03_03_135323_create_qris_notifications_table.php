@@ -10,9 +10,9 @@ return new class extends Migration {
      */
     public function up(): void
     {
-        Schema::create('bri.qris_notifications', function (Blueprint $table) {
+        Schema::create('qris_notifications', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('qris_transaction_id')->nullable()->after('id')->constrained('bri.qris_transactions');
+            $table->foreignId('qris_transaction_id')->nullable()->constrained('qris_transactions');
             $table->string('reference_no');
             $table->string('partner_reference_no');
             $table->string('transaction_status')->nullable();
@@ -23,7 +23,6 @@ return new class extends Migration {
             $table->decimal('amount', 18, 2);
             $table->string('currency', 3);
             $table->string('bank_code')->nullable();
-            //$table->text('additional_info')->nullable();
             $table->text('raw_data');
             $table->timestamps();
 

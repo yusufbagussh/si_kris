@@ -15,7 +15,6 @@ class QRISNotifyController extends Controller
 {
     private $briClientKey;
     private $briClientSecret;
-    private $briPrivateKeyPath;
     private $briPublicKeyPath;
     private $briPartnerId;
     private $briPublicKey;
@@ -25,9 +24,8 @@ class QRISNotifyController extends Controller
         $this->briPartnerId = config('qris.clients.bri.partner_id');
         $this->briClientKey = config('qris.clients.bri.client_id');
         $this->briClientSecret = config('qris.clients.bri.client_secret');
-        $this->briPrivateKeyPath = storage_path('app/public/keys/private_key.pem'); // Simpan private key di storage/keys
-        $this->briPublicKeyPath = storage_path('app/public/keys/public_key.pem'); // Simpan private key di storage/keys
-        $this->briPublicKey = config('qris.clients.bri.public_key'); // Simpan private key di storage/keys
+        $this->briPublicKeyPath = storage_path('app/public/keys/public_key.pem');
+        $this->briPublicKey = config('qris.clients.bri.public_key');
     }
 
     /**
@@ -36,10 +34,8 @@ class QRISNotifyController extends Controller
     public function generateToken(Request $request)
     {
         try {
-            // Log the request for debugging
             Log::info('Token Request', ['headers' => $request->header(), 'body' => $request->all()]);
 
-            // 1. Validasi header
             $requiredHeaders = ['X-CLIENT-KEY', 'X-TIMESTAMP', 'X-SIGNATURE'];
             foreach ($requiredHeaders as $header) {
                 if (!$request->header($header)) {
@@ -54,7 +50,6 @@ class QRISNotifyController extends Controller
             $timestamp = $request->header('X-TIMESTAMP');
             $signature = $request->header('X-SIGNATURE');
 
-            // if (!isset($validClients[$clientKey])) {
             if ($this->briClientKey != $clientKey) {
                 return response()->json([
                     'responseCode' => '4017300',
@@ -62,7 +57,6 @@ class QRISNotifyController extends Controller
                 ], 401);
             }
 
-            //$clientInfo = $validClients[$clientKey];
             $stringToSign = "{$clientKey}|{$timestamp}";
 
             $publicKey = openssl_pkey_get_public($this->briPublicKey);
@@ -159,7 +153,6 @@ class QRISNotifyController extends Controller
                 ], 401);
             }
 
-            // 2. Validasi header
             $requiredHeaders = [
                 'X-SIGNATURE',
                 'X-TIMESTAMP',
@@ -176,8 +169,27 @@ class QRISNotifyController extends Controller
                 }
             }
 
-            // 3. Verifikasi signature
-            // Implementasi verifikasi signature sesuai dengan dokumen SNAP QRIS
+            if (preg_match(
+                '/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})[+-](\d{2}):(\d{2})$/',
+                $request->header('X-TIMESTAMP')
+            ) !== 1) {
+                return response()->json([
+                    'responseCode' => '4005201',
+                    'responseMessage' => 'Invalid Field Format: timestamp must be in ISO 8601 format'
+                ], 400);
+            }
+            
+            $validatorExternalID = Validator::make($request->header(), [
+                'x-external-id' => 'unique:qris_notifications,external_id',
+            ]);
+
+            if ($validatorExternalID->fails()) {
+                return response()->json([
+                    'responseCode' => '4095200',
+                    'responseMessage' => 'conflict'
+                ], 409);
+            }
+
             if (!$this->verifyNotificationSignature($request)) {
                 return response()->json([
                     'responseCode' => '4017300',
@@ -185,7 +197,6 @@ class QRISNotifyController extends Controller
                 ], 401);
             }
 
-            // 4. Validasi request body
             $requiredFields = [
                 'originalReferenceNo',
                 'originalPartnerReferenceNo',
@@ -203,7 +214,6 @@ class QRISNotifyController extends Controller
                 }
             }
 
-            // Validasi struktur amount
             if (!$request->has('amount.value') || !$request->has('amount.currency')) {
                 return response()->json([
                     'responseCode' => '4005202',
@@ -211,20 +221,10 @@ class QRISNotifyController extends Controller
                 ], 400);
             }
 
-            if (preg_match(
-                    '/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})[+-](\d{2}):(\d{2})$/',
-                    $request->header('X-TIMESTAMP')
-                ) !== 1) {
-                return response()->json([
-                    'responseCode' => '4005201',
-                    'responseMessage' => 'Invalid Field Format: timestamp must be in ISO 8601 format'
-                ], 400);
-            }
-
             // Validate required fields
             $validator = Validator::make($request->all(), [
-                //'originalReferenceNo' => 'string|max:12',
-                // 'originalPartnerReferenceNo' => 'string|max:6',
+                'originalReferenceNo' => 'string',
+                'originalPartnerReferenceNo' => 'string',
                 'customerNumber' => 'string|max:64',
                 'destinationAccountName' => 'string|max:25',
                 'amount.value' => 'numeric',

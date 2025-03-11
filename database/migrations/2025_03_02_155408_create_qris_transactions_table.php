@@ -10,7 +10,7 @@ return new class extends Migration {
      */
     public function up(): void
     {
-        Schema::create('bri.qris_transactions', function (Blueprint $table) {
+        Schema::create('qris_transactions', function (Blueprint $table) {
             $table->id();
             $table->string('reference_no')->unique();
             $table->string('partner_reference_no')->index();

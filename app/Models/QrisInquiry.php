@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class QrisInquiry extends Model
 {
-    protected $table = 'bri.qris_inquiries';
+    protected $table = 'qris_inquiries';
 
     use HasFactory;
 

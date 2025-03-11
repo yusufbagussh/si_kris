@@ -10,8 +10,10 @@ return new class extends Migration {
      */
     public function up(): void
     {
-        Schema::table('bri.qris_notifications', function (Blueprint $table) {
-            $table->text('raw_header')->nullable()->after('raw_data');
+        Schema::table('qris_notifications', function (Blueprint $table) {
+            $table->string('external_id')->nullable()->after('id');
+
+            $table->index('external_id');
         });
     }
 
@@ -20,8 +22,8 @@ return new class extends Migration {
      */
     public function down(): void
     {
-        Schema::table('qris_notifications', function (Blueprint $table) {
-            $table->dropColumn('raw_header');
+        Schema::table('qris_transactions', function (Blueprint $table) {
+            $table->dropColumn('external_id');
         });
     }
 };

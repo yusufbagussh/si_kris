@@ -18,6 +18,7 @@ class QRISService
     private $clientId;
     private $clientSecret;
     private $clientIdBri;
+    private $channelIdBri;
     private $clientSecretBri;
     private $partnerIdBri;
     private $partnerId;
@@ -34,6 +35,7 @@ class QRISService
         $this->clientIdBri = env('BRI_CLIENT_ID');
         $this->clientSecretBri = env('BRI_CLIENT_SECRET');
         $this->partnerIdBri = env('BRI_PARTNER_ID');
+        $this->channelIdBri = env('BRI_CHANNEL_ID');
         $this->baseUrl = env('QRIS_BASE_URL');
         $this->clientId = env('QRIS_CLIENT_ID');
         $this->clientSecret = env('QRIS_CLIENT_SECRET');
@@ -452,7 +454,7 @@ class QRISService
             'Content-Type' => 'application/json',
             'X-TIMESTAMP' => $timestamp,
             'X-PARTNER-ID' => $this->partnerIdBri,
-            'CHANNEL-ID' => $this->channelId,
+            'CHANNEL-ID' => $this->channelIdBri,
             'X-EXTERNAL-ID' => $this->externalId,
             'X-SIGNATURE' => $signature,
         ];

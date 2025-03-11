@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class QrisTransaction extends Model
 {
-    protected $table = 'bri.qris_transactions';
+    protected $table = 'qris_transactions';
     use HasFactory;
 
     /**

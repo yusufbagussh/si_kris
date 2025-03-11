@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('bri.qris_bri_tokens', function (Blueprint $table) {
+        Schema::create('qris_bri_tokens', function (Blueprint $table) {
             $table->id();
             $table->text('token');
             $table->string('token_type');

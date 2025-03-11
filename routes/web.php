@@ -16,14 +16,10 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::get('/', function () {
-    return view('welcome');
-});
-
 /**
  * QRIS Feature Routes
  */
-Route::get('/qris', function () {
+Route::get('/qr', function () {
     return view('qris.generate-qr');
 });
 
@@ -31,40 +27,21 @@ Route::get('/inquiry', function () {
     return view('qris.inquiry');
 });
 
-Route::get('/', function () {
-    return view('qris.index');
-});
-
-Route::get('/qris/get-token', [QRISController::class, 'getToken'])->name('qris.generate');
-Route::post('/qris/generate', [QRISController::class, 'generateQR'])->name('qris.generate');
 Route::post('/qris/generate-qr', [QRISController::class, 'generateQrPatient'])->name('qris.generate-qr');
-Route::post('/qris/inquiry', [QRISController::class, 'inquiryPayment'])->name('qris.inquiry');
 Route::post('/qris/query-payment', [QRISController::class, 'inquiryPaymentPatient'])->name('qris.query-payment');
 
+
+Route::post('/snap/v1.0/access-token/b2b', [QRISNotifyController::class, 'generateToken']);
+Route::post('/snap/v1.1/qr/qr-mpm-notify', [QRISNotifyController::class, 'paymentNotification']);
+
+//Generate Credential
+Route::get('/snap/generate/client-credential', function () {
+    return response()->json([
+        'client_id' => \Illuminate\Support\Str::random(32),
+        'client_secret' => \Illuminate\Support\Str::random(16),
+    ]);
+});
+
 //Generate Signature
-Route::post('/qris/signature-token', [QRISController::class, 'getSignatureToken']);
-Route::post('/qris/signature-notify', [QRISController::class, 'generateSignatureNotify']);
-
-Route::post('/qris/snap/v1.0/access-token/b2b', [QRISNotifyController::class, 'generateToken']);
-Route::post('/qris/snap/v1.1/qr/qr-mpm-notify', [QRISNotifyController::class, 'paymentNotification']);
-
-Route::get('/patient', function () {
-    return view('qris.patient');
-});
-Route::post('/patient/check', [QRISController::class, 'checkPatient'])->name('patient.check');
-
-/**
- * Route Test Connection to Database
- */
-Route::get('/test-connection', function () {
-    try {
-        DB::connection('sqlsrv_ws')->getPdo();
-        echo "Connected successfully to the database!";
-    } catch (\Exception $e) {
-        die("Could not connect to the database. Error: " . $e->getMessage());
-    }
-    // $users = DB::table('Address')
-    //     ->select('StreetName')
-    //     ->get();
-    // var_dump($users);
-});
+Route::post('/snap/generate/signature-token', [QRISController::class, 'getSignatureToken']);
+Route::post('/snap/generate/signature-notify', [QRISController::class, 'generateSignatureNotify']);
