@@ -176,6 +176,27 @@ class QRISNotifyController extends Controller
                 }
             }
 
+            $validatorExternalID = Validator::make($request->header(), [
+                'x-external-id' => 'unique:bri.qris_notifications,external_id',
+            ]);
+
+            if ($validatorExternalID->fails()) {
+                return response()->json([
+                    'responseCode' => '4095200',
+                    'responseMessage' => 'conflict'
+                ], 409);
+            }
+
+            if (preg_match(
+                '/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})[+-](\d{2}):(\d{2})$/',
+                $request->header('X-TIMESTAMP')
+            ) !== 1) {
+                return response()->json([
+                    'responseCode' => '4005201',
+                    'responseMessage' => 'Invalid Field Format: timestamp must be in ISO 8601 format'
+                ], 400);
+            }
+
             // 3. Verifikasi signature
             // Implementasi verifikasi signature sesuai dengan dokumen SNAP QRIS
             if (!$this->verifyNotificationSignature($request)) {
@@ -211,20 +232,10 @@ class QRISNotifyController extends Controller
                 ], 400);
             }
 
-            if (preg_match(
-                    '/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})[+-](\d{2}):(\d{2})$/',
-                    $request->header('X-TIMESTAMP')
-                ) !== 1) {
-                return response()->json([
-                    'responseCode' => '4005201',
-                    'responseMessage' => 'Invalid Field Format: timestamp must be in ISO 8601 format'
-                ], 400);
-            }
-
             // Validate required fields
             $validator = Validator::make($request->all(), [
-                //'originalReferenceNo' => 'string|max:12',
-                // 'originalPartnerReferenceNo' => 'string|max:6',
+                'originalReferenceNo' => 'string',
+                'originalPartnerReferenceNo' => 'string',
                 'customerNumber' => 'string|max:64',
                 'destinationAccountName' => 'string|max:25',
                 'amount.value' => 'numeric',
@@ -237,6 +248,7 @@ class QRISNotifyController extends Controller
                     'responseMessage' => 'Invalid Field Format: ' . implode(', ', $validator->errors()->all())
                 ], 400);
             }
+
             $headers = [
                 'x-signature' => $request->header('x-signature') ?? null,
                 'x-timestamp' => $request->header('x-timestamp') ?? null,
