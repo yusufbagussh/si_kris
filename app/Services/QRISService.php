@@ -121,7 +121,7 @@ class QRISService
 
         if ($response->successful()) {
             // Save QR data to database
-            $this->saveGeneratedQR($response->json(), $partnerReferenceNo, $amount, $this->merchantId, $this->terminalId);
+            $this->saveGeneratedQR($response->json(), $partnerReferenceNo, $medicalRecordNo, $amount, $this->merchantId, $this->terminalId);
         } else {
             Log::error('Failed to query payment', [
                 'response' => $response->json(),
@@ -155,18 +155,47 @@ class QRISService
         //];
 
         $response = Http::withHeaders($headers)->post($this->baseUrl . $endpoint, $body);
+
+        $response = [
+            "responseCode" => "2005100",
+            "responseMessage" => "Successful",
+            "originalReferenceNo" => $originalReferenceNo,
+            "serviceCode" => "17",
+            "latestTransactionStatus" => "00",
+            "transactionStatusDesc" => "Successfully",
+            "amount" => [
+                "value" => "100.00",
+                "currency" => "IDR"
+            ],
+            "terminalId" => $this->terminalId,
+            "additionalInfo" => [
+                "customerName" => "I GEDE TONI DHARMAWAN",
+                "customerNumber" => "9360015723456789",
+                "invoiceNumber" => "10009121031000912103",
+                "issuerName" => "Finnet 2",
+                "issuerRrn" => "110002756582",
+                "mpan" => "9360000201102921379"
+            ]
+        ];
         //Log::info("INFO RESPONSE INQUIRY QRIS BRIS");
         //Log::info("response : " . $response);
-
-        if ($response->successful()) {
-            // Save inquiry data to database
-            $this->savePaymentInquiry($response->json(), $originalReferenceNo, $this->terminalId);
-        } else {
-            Log::error('Failed to query payment', [
-                'response' => $response->json(),
-                'status' => $response->status()
-            ]);
+        // Find transaction by reference number
+        $transaction = QrisTransaction::where('original_reference_no', $originalReferenceNo)->first();
+        if (!$transaction) {
+            return null;
         }
+
+        $this->savePaymentInquiry($response, $originalReferenceNo, $this->terminalId, $transaction);
+
+        // if ($response->successful()) {
+        //     $this->savePaymentInquiry($response->json(), $originalReferenceNo, $this->terminalId);
+        // } else {
+        //     Log::error('Failed to query payment', [
+        //         'response' => $response->json(),
+        //         'status' => $response->status()
+        //     ]);
+        // }
+        return $response;
         return $response->json();
 
         //return null;
@@ -317,12 +346,20 @@ class QRISService
      * @param string $terminalId
      * @return void
      */
-    protected function saveGeneratedQR(array $responseData, string $partnerReferenceNo, float $amount, string $merchantId, string $terminalId)
-    {
+    protected function saveGeneratedQR(
+        array $responseData,
+        string $partnerReferenceNo,
+        string $registrationId,
+        float $amount,
+        string $merchantId,
+        string $terminalId
+    ) {
         QrisTransaction::create([
-            'reference_no' => $responseData['referenceNo'],
+            'original_reference_no' => $responseData['referenceNo'],
             'partner_reference_no' => $partnerReferenceNo,
-            'amount' => $amount,
+            'registration_id' => $registrationId,
+            'value' => $amount,
+            //currency
             'merchant_id' => $merchantId,
             'terminal_id' => $terminalId,
             'qr_content' => $responseData['qrContent'],
@@ -360,58 +397,58 @@ class QRISService
      * @param string $terminalId
      * @return void
      */
-    protected function savePaymentInquiry(array $responseData, string $referenceNo, string $terminalId)
+    protected function savePaymentInquiry(array $responseData, string $referenceNo, string $terminalId, $transaction)
     {
-        // Find transaction by reference number
-        $transaction = QrisTransaction::where('reference_no', $referenceNo)->first();
-        if (!$transaction) {
-        }
+        // Convert transaction status code to readable status
+        $statusMap = [
+            '00' => 'SUCCESS',
+            '01' => 'INITIATED',
+            '02' => 'PAYING',
+            '03' => 'PENDING',
+            '04' => 'REFUNDED',
+            '05' => 'CANCELED',
+            '06' => 'FAILED',
+            '07' => 'NOT_FOUND',
+        ];
 
-        if ($transaction) {
-            // Convert transaction status code to readable status
-            $statusMap = [
-                '00' => 'SUCCESS',
-                '01' => 'INITIATED',
-                '02' => 'PAYING',
-                '03' => 'PENDING',
-                '04' => 'REFUNDED',
-                '05' => 'CANCELED',
-                '06' => 'FAILED',
-                '07' => 'NOT_FOUND',
-            ];
+        //Update data QRIS Transaction`
+        $status = $statusMap[$responseData['latestTransactionStatus']] ?? 'UNKNOWN';
+        $transaction->status = $status;
+        $transaction->last_inquiry_at = now();
+        $transaction->save();
 
-            $status = $statusMap[$responseData['latestTransactionStatus']] ?? 'UNKNOWN';
+        //// Update transaction status
+        // $transaction->latest_transaction_status = $responseData['latestTransactionStatus'];
+        // $transaction->transaction_status_desc = $responseData['transactionStatusDesc'] ?? null;
 
-            // Update transaction status
-            $transaction->status = $status;
-            $transaction->status_code = $responseData['latestTransactionStatus'];
-            $transaction->status_description = $responseData['transactionStatusDesc'] ?? null;
+        // // Save additional info if present
+        // if (isset($responseData['additionalInfo'])) {
+        //     $transaction->customer_name = $responseData['additionalInfo']['customerName'] ?? null;
+        //     $transaction->customer_number = $responseData['additionalInfo']['customerNumber'] ?? null;
+        //     $transaction->invoice_number = $responseData['additionalInfo']['invoiceNumber'] ?? null;
+        //     $transaction->issuer_name = $responseData['additionalInfo']['issuerName'] ?? null;
+        //     $transaction->issuer_rrn = $responseData['additionalInfo']['issuerRrn'] ?? null;
+        // }
 
-            // Save additional info if present
-            if (isset($responseData['additionalInfo'])) {
-                $transaction->customer_name = $responseData['additionalInfo']['customerName'] ?? null;
-                $transaction->customer_number = $responseData['additionalInfo']['customerNumber'] ?? null;
-                $transaction->invoice_number = $responseData['additionalInfo']['invoiceNumber'] ?? null;
-                $transaction->issuer_name = $responseData['additionalInfo']['issuerName'] ?? null;
-                $transaction->issuer_rrn = $responseData['additionalInfo']['issuerRrn'] ?? null;
-            }
-
-            $transaction->last_inquiry_at = now();
-            $transaction->save();
-
-            // Log inquiry
-            QrisInquiry::create([
-                'qris_transaction_id' => $transaction->id,
-                'reference_no' => $referenceNo,
-                'terminal_id' => $terminalId,
-                'response_code' => $responseData['responseCode'],
-                'response_message' => $responseData['responseMessage'],
-                'transaction_status' => $status,
-                'transaction_status_code' => $responseData['latestTransactionStatus'],
-                'transaction_status_desc' => $responseData['transactionStatusDesc'] ?? null,
-                'raw_response' => json_encode($responseData),
-            ]);
-        }
+        // Log inquiry
+        QrisInquiry::create([
+            'qris_transaction_id' => $transaction->id,
+            'original_reference_no' => $referenceNo,
+            'terminal_id' => $terminalId,
+            'response_code' => $responseData['responseCode'],
+            'response_message' => $responseData['responseMessage'],
+            'service_code' => $responseData['serviceCode'],
+            //'transaction_status' => $status,
+            'latest_transaction_status' => $responseData['latestTransactionStatus'],
+            'transaction_status_desc' => $responseData['transactionStatusDesc'] ?? null,
+            'customer_name' => $responseData['additionalInfo']['customerName'] ?? null,
+            'customer_number' => $responseData['additionalInfo']['customerNumber'] ?? null,
+            'invoice_number' => $responseData['additionalInfo']['invoiceNumber'] ?? null,
+            'issuer_name' => $responseData['additionalInfo']['issuerName'] ?? null,
+            'issuer_rrn' => $responseData['additionalInfo']['issuerRrn'] ?? null,
+            'mpan' => $responseData['additionalInfo']['mpan'] ?? null,
+            //'raw_response' => json_encode($responseData),
+        ]);
     }
 
     private function verifyRSASignature($encodedSignature, $stringToSign)

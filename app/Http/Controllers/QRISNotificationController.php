@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 
-class QRISNotifyController extends Controller
+class QRISNotificationController extends Controller
 {
     private $briClientKey;
     private $briClientSecret;
@@ -405,16 +405,17 @@ class QRISNotifyController extends Controller
         ]);
 
         $transactionId = null;
-        $transaction = QrisTransaction::where('reference_no', $paymentData['originalReferenceNo'])->first();
+        $transaction = QrisTransaction::where('original_reference_no', $paymentData['originalReferenceNo'])->first();
         if ($transaction != null) {
             $transactionId = $transaction->id;
         }
 
         $data = [
             'qris_transaction_id' => $transactionId,
-            'reference_no' => $paymentData['originalReferenceNo'],
+            'original_reference_no' => $paymentData['originalReferenceNo'],
             'partner_reference_no' => $paymentData['originalPartnerReferenceNo'],
-            'transaction_status' => $paymentData['latestTransactionStatus'] ?? null,
+            'external_id' => $headers['x-external-id'],
+            'latest_transaction_status' => $paymentData['latestTransactionStatus'] ?? null,
             'transaction_status_desc' => $paymentData['transactionStatusDesc'] ?? null,
             'customer_number' => $paymentData['customerNumber'],
             'account_type' => $paymentData['accountType'] ?? null,
@@ -422,10 +423,13 @@ class QRISNotifyController extends Controller
             'amount' => $paymentData['amount']['value'],
             'currency' => $paymentData['amount']['currency'],
             'bank_code' => $paymentData['bankCode'] ?? null,
-            //'additional_info' => json_encode($paymentData['additionalInfo'] ?? []),
-            'raw_data' => json_encode($paymentData),
+            'session_id' => $paymentData['sessionID'] ?? null,
+            'external_store_id' => $paymentData['externalStoreID'] ?? null,
+            'reff_id' => $paymentData['additionalInfo']['reffId'] ?? null,
+            'issuer_name' => $paymentData['additionalInfo']['issuerName'] ?? null,
+            'issuer_rrn' => $paymentData['additionalInfo']['issuerRrn'] ?? null,
+            'raw_request' => json_encode($paymentData),
             'raw_header' => json_encode($headers),
-            'external_id' => $headers['x-external-id'],
         ];
         // Simpan data pembayaran ke database
         QrisNotification::create($data);

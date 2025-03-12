@@ -16,27 +16,27 @@ class QrisTransaction extends Model
      * @var array<int, string>
      */
     protected $fillable = [
-        'qris_transaction_id',
-        'reference_no',
+        'registration_id',
+        'original_reference_no',
         'partner_reference_no',
-        'amount',
+        'value',
         'currency',
         'merchant_id',
         'terminal_id',
         'qr_content',
         'status',
-        'status_code',
-        'status_description',
-        'customer_name',
-        'customer_number',
-        'invoice_number',
-        'issuer_name',
-        'issuer_rrn',
+        //'status_code',
+        //'status_description',
+        //'customer_name',
+        //'customer_number',
+        //'invoice_number',
+        //'issuer_name',
+        //'issuer_rrn',
         'response_code',
         'response_message',
+        'expires_at',
         'paid_at',
         'last_inquiry_at',
-        'expires_at',
     ];
 
     /**

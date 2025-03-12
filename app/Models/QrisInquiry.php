@@ -18,14 +18,20 @@ class QrisInquiry extends Model
      */
     protected $fillable = [
         'qris_transaction_id',
-        'reference_no',
+        'original_reference_no',
         'terminal_id',
         'response_code',
         'response_message',
-        'transaction_status',
-        'transaction_status_code',
+        'service_code',
+        'latest_transaction_status',
         'transaction_status_desc',
-        'raw_response',
+        'customer_name',
+        'customer_number',
+        'invoice_number',
+        'issuer_name',
+        'issuer_rrn',
+        'mpan',
+        //'raw_response',
     ];
 
     /**

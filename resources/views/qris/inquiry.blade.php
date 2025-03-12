@@ -18,7 +18,7 @@
                     <div class="card-body">
                         <!-- Form Inquiry Payment -->
                         <h2 class="text-center mb-3">Inquiry Payment</h2>
-                        <form id="inquiryForm" action="{{ route('qris.query-payment') }}" method="POST">
+                        <form id="inquiryForm" action="{{ route('qris.inquiry') }}" method="POST">
                             {{-- @csrf --}}
                             <div class="mb-3">
                                 <label class="form-label">Original Reference No:</label>
@@ -48,10 +48,10 @@
                 body: formData
             });
 
-            const data = await response.json();
+            const result = await response.json();
             document.getElementById('inquiryResult').classList.remove('d-none');
             document.getElementById('statusMessage').textContent =
-                `Status: ${data.transactionStatusDesc || 'Unknown'}`;
+                `Status: ${result.data.transactionStatusDesc || 'Unknown'}`;
         });
     </script>
 

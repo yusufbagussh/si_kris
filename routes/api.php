@@ -1,7 +1,7 @@
 <?php
 
 use App\Http\Controllers\QRISController;
-use App\Http\Controllers\QRISNotifyController;
+use App\Http\Controllers\QRISNotificationController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -20,8 +20,8 @@ use Illuminate\Support\Facades\Route;
 //     return $request->user();
 // });
 
-// Route::post('/snap/v1.0/access-token/b2b', [QRISNotifyController::class, 'generateToken']);
-// Route::post('/snap/v1.1/qr/qr-mpm-notify', [QRISNotifyController::class, 'paymentNotification']);
+// Route::post('/snap/v1.0/access-token/b2b', [QRISNotificationController::class, 'generateToken']);
+// Route::post('/snap/v1.1/qr/qr-mpm-notify', [QRISNotificationController::class, 'paymentNotification']);
 
 // //Generate Credential
 // Route::get('/snap/generate/client-credential', function () {

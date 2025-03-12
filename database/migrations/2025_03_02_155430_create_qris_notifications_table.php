@@ -13,9 +13,10 @@ return new class extends Migration {
         Schema::create('qris_notifications', function (Blueprint $table) {
             $table->id();
             $table->foreignId('qris_transaction_id')->nullable()->constrained('qris_transactions');
-            $table->string('reference_no');
+            $table->string('original_reference_no');
             $table->string('partner_reference_no');
-            $table->string('transaction_status')->nullable();
+            $table->string('external_id')->unique();
+            $table->string('latest_transaction_status')->nullable();
             $table->string('transaction_status_desc')->nullable();
             $table->string('customer_number');
             $table->string('account_type')->nullable();
@@ -23,10 +24,17 @@ return new class extends Migration {
             $table->decimal('amount', 18, 2);
             $table->string('currency', 3);
             $table->string('bank_code')->nullable();
-            $table->text('raw_data');
+            $table->string('session_id')->nullable();
+            $table->string('external_store_id')->nullable();
+            $table->string('reff_id')->nullable();
+            $table->string('issuer_name')->nullable();
+            $table->string('issuer_rrn')->nullable();
+            $table->json('raw_request');
+            $table->json('raw_header');
             $table->timestamps();
+            //$table->text('raw_data');
 
-            $table->index('reference_no');
+            $table->index('original_reference_no');
             $table->index('partner_reference_no');
         });
     }

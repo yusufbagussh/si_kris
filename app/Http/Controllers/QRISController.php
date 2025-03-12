@@ -57,7 +57,7 @@ class QRISController extends Controller
             }
 
             $medicalNo = substr(str_replace("-", "", $request->medical_record_no), -8);
-            $qrisTransaction = QrisTransaction::select('partner_reference_no', 'reference_no', 'response_code', 'response_message', 'qr_content', 'expires_at')
+            $qrisTransaction = QrisTransaction::select('partner_reference_no', 'original_reference_no', 'response_code', 'response_message', 'qr_content', 'expires_at')
                 ->where('partner_reference_no', 'like', $medicalNo . '%')
                 ->where('status', 'PENDING')
                 ->where('expires_at', '>', now())
@@ -73,7 +73,7 @@ class QRISController extends Controller
                     "responseMessage" => $qrisTransaction->response_message,
                     "partnerReferenceNo" => $qrisTransaction->partner_reference_no,
                     "qrContent" => $qrisTransaction->qr_content,
-                    "referenceNo" => $qrisTransaction->reference_no,
+                    "referenceNo" => $qrisTransaction->original_reference_no,
                 ]);
             }
 
@@ -110,6 +110,10 @@ class QRISController extends Controller
 
         try {
             $response = $this->qrisService->inquiryPayment($token,  $request->original_reference_no);
+            if ($response == null) {
+                return $this->fail_msg_res('Data transaksi tidak ditemukan');
+            }
+
             if ($response['responseCode'] != 2005100) {
                 return $this->fail_msg_res($response['responseMessage']);
             }

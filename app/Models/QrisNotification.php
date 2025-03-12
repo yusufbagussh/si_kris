@@ -12,9 +12,11 @@ class QrisNotification extends Model
     use HasFactory;
 
     protected $fillable = [
-        'reference_no',
+        'qris_transaction_id',
+        'original_reference_no',
         'partner_reference_no',
-        'transaction_status',
+        'external_id',
+        'latest_transaction_status',
         'transaction_status_desc',
         'customer_number',
         'account_type',
@@ -22,9 +24,13 @@ class QrisNotification extends Model
         'amount',
         'currency',
         'bank_code',
-        //'additional_info',
-        'raw_data',
+        'session_id',
+        'external_store_id',
+        'reff_id',
+        'issuer_name',
+        'issuer_rrn',
+        'raw_request',
         'raw_header',
-        'external_id',
+        //'additional_info',
     ];
 }

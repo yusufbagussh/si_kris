@@ -23,13 +23,13 @@
                             <div class="mb-3">
                                 <label class="form-label">Nomor Rekam Medis:</label>
                                 <input type="text" id="medical_record_no" name="medical_record_no"
-                                    class="form-control" required maxlength="14" placeholder="12-34-56-78">
+                                    class="form-control" required maxlength="14" placeholder="">
                                 <div id="errorMessage" class="text-danger mt-1"></div>
                             </div>
-                            <div class="mb-3">
+                            {{-- <div class="mb-3">
                                 <label class="form-label">Tanggal Pasien:</label>
                                 <input type="date" name="patient_date" class="form-control">
-                            </div>
+                            </div> --}}
                             <button type="submit" class="btn btn-primary w-100">Cek Data</button>
                         </form>
 
