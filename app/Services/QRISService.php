@@ -156,27 +156,28 @@ class QRISService
 
         $response = Http::withHeaders($headers)->post($this->baseUrl . $endpoint, $body);
 
-        $response = [
-            "responseCode" => "2005100",
-            "responseMessage" => "Successful",
-            "originalReferenceNo" => $originalReferenceNo,
-            "serviceCode" => "17",
-            "latestTransactionStatus" => "00",
-            "transactionStatusDesc" => "Successfully",
-            "amount" => [
-                "value" => "100.00",
-                "currency" => "IDR"
-            ],
-            "terminalId" => $this->terminalId,
-            "additionalInfo" => [
-                "customerName" => "I GEDE TONI DHARMAWAN",
-                "customerNumber" => "9360015723456789",
-                "invoiceNumber" => "10009121031000912103",
-                "issuerName" => "Finnet 2",
-                "issuerRrn" => "110002756582",
-                "mpan" => "9360000201102921379"
-            ]
-        ];
+        // $response = [
+        //     "responseCode" => "2005100",
+        //     "responseMessage" => "Successful",
+        //     "originalReferenceNo" => $originalReferenceNo,
+        //     "serviceCode" => "17",
+        //     "latestTransactionStatus" => "00",
+        //     "transactionStatusDesc" => "Successfully",
+        //     "amount" => [
+        //         "value" => "100.00",
+        //         "currency" => "IDR"
+        //     ],
+        //     "terminalId" => $this->terminalId,
+        //     "additionalInfo" => [
+        //         "customerName" => "I GEDE TONI DHARMAWAN",
+        //         "customerNumber" => "9360015723456789",
+        //         "invoiceNumber" => "10009121031000912103",
+        //         "issuerName" => "Finnet 2",
+        //         "issuerRrn" => "110002756582",
+        //         "mpan" => "9360000201102921379"
+        //     ]
+        // ];
+
         //Log::info("INFO RESPONSE INQUIRY QRIS BRIS");
         //Log::info("response : " . $response);
         // Find transaction by reference number
@@ -185,17 +186,18 @@ class QRISService
             return null;
         }
 
-        $this->savePaymentInquiry($response, $originalReferenceNo, $this->terminalId, $transaction);
+        //$this->savePaymentInquiry($response->json(), $originalReferenceNo, $this->terminalId, $transaction);
 
-        // if ($response->successful()) {
-        //     $this->savePaymentInquiry($response->json(), $originalReferenceNo, $this->terminalId);
-        // } else {
-        //     Log::error('Failed to query payment', [
-        //         'response' => $response->json(),
-        //         'status' => $response->status()
-        //     ]);
-        // }
-        return $response;
+        if ($response->successful()) {
+            $this->savePaymentInquiry($response->json(), $originalReferenceNo, $this->terminalId, $transaction);
+        } else {
+            Log::error('Failed to query payment', [
+                'response' => $response->json(),
+                'status' => $response->status()
+            ]);
+        }
+
+        //return $response;
         return $response->json();
 
         //return null;
