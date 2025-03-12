@@ -40,7 +40,7 @@ class QRISNotificationController extends Controller
             foreach ($requiredHeaders as $header) {
                 if (!$request->header($header)) {
                     return response()->json([
-                        'responseCode' => '5201',
+                        'responseCode' => '4007302',
                         'responseMessage' => "Invalid Mandatory Field: Header $header missing"
                     ], 400);
                 }
