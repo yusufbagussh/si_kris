@@ -368,7 +368,7 @@ class QRISService
             'status' => 'PENDING',
             'response_code' => $responseData['responseCode'],
             'response_message' => $responseData['responseMessage'],
-            'expires_at' => now()->addMinutes(2),
+            'expires_at' => now()->addSeconds(119),
         ]);
     }
 
