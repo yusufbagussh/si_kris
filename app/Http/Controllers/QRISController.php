@@ -57,6 +57,17 @@ class QRISController extends Controller
             }
 
             $medicalNo = substr(str_replace("-", "", $request->medical_record_no), -8);
+
+            $qrisTransaction = QrisTransaction::select('partner_reference_no', 'original_reference_no', 'response_code', 'response_message', 'qr_content', 'expires_at')
+                ->where('partner_reference_no', 'like', $medicalNo . '%')
+                ->where('status', 'SUCCESS')
+                ->latest()
+                ->first();
+
+            if ($qrisTransaction) {
+                return $this->ok_msg_res('Transaksi sudah dibayar');
+            }
+
             $qrisTransaction = QrisTransaction::select('partner_reference_no', 'original_reference_no', 'response_code', 'response_message', 'qr_content', 'expires_at')
                 ->where('partner_reference_no', 'like', $medicalNo . '%')
                 ->where('status', 'PENDING')
@@ -85,7 +96,7 @@ class QRISController extends Controller
 
             return $this->ok_data_res($response);
         } catch (\Exception $e) {
-            Log::error('[' . $e->getCode() . '] ' . $e->getMessage());
+            Log::error('[' . $e->getCode() . '][generateQrPatient] ' . $e->getMessage());
             return $this->error_res(500);
         }
     }
@@ -109,18 +120,20 @@ class QRISController extends Controller
         }
 
         try {
-            $response = $this->qrisService->inquiryPayment($token,  $request->original_reference_no);
-            if ($response == null) {
+            // Find transaction by reference number
+            $transaction = QrisTransaction::where('original_reference_no', $request->original_reference_no)->first();
+            if (!$transaction) {
                 return $this->fail_msg_res('Data transaksi tidak ditemukan');
             }
 
+            $response = $this->qrisService->inquiryPayment($token,  $request->original_reference_no);
             if ($response['responseCode'] != 2005100) {
                 return $this->fail_msg_res($response['responseMessage']);
             }
 
             return $this->ok_data_res($response);
         } catch (\Exception $e) {
-            Log::error('[' . $e->getCode() . '] ' . $e->getMessage());
+            Log::error('[' . $e->getCode() . '][inquiryPaymentPatient] ' . $e->getMessage());
             return $this->error_res(500);
         }
     }

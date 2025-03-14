@@ -7,6 +7,17 @@
     <title>Cek Data Pasien & Transaksi</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <!-- SweetAlert2 CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+    <!-- SweetAlert2 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        /* Custom styles for toasts */
+        .swal2-toast {
+            max-width: 350px !important;
+            font-size: 0.9rem !important;
+        }
+    </style>
 </head>
 
 <body class="bg-light">
@@ -26,42 +37,14 @@
                                     class="form-control" required maxlength="14" placeholder="">
                                 <div id="errorMessage" class="text-danger mt-1"></div>
                             </div>
-                            {{-- <div class="mb-3">
-                                <label class="form-label">Tanggal Pasien:</label>
-                                <input type="date" name="patient_date" class="form-control">
-                            </div> --}}
                             <button type="submit" class="btn btn-primary w-100">Cek Data</button>
                         </form>
-
 
                         <!-- Tempat Hasil -->
                         <div id="qrCodeContainer" class="text-center mt-4 d-none">
                             <h4>QR Code:</h4>
                             <div id="qrcode"></div>
                         </div>
-                        {{--                    <div id="patientResult" class="mt-4 d-none"> --}}
-                        {{--                        <h4>Data Pasien</h4> --}}
-                        {{--                        <p><strong>Nama:</strong> <span id="patientName"></span></p> --}}
-                        {{--                        <p><strong>Umur:</strong> <span id="patientAge"></span></p> --}}
-                        {{--                        <p><strong>Tanggal Kunjungan:</strong> <span id="visitDate"></span></p> --}}
-
-                        {{--                        <h4 class="mt-3">Riwayat Transaksi</h4> --}}
-                        {{--                        <table class="table table-bordered"> --}}
-                        {{--                            <thead> --}}
-                        {{--                            <tr> --}}
-                        {{--                                <th>Referensi</th> --}}
-                        {{--                                <th>Jumlah</th> --}}
-                        {{--                                <th>Status</th> --}}
-                        {{--                            </tr> --}}
-                        {{--                            </thead> --}}
-                        {{--                            <tbody id="transactionList"></tbody> --}}
-                        {{--                        </table> --}}
-
-                        {{--                        <h4 class="mt-3">QR Code Pembayaran</h4> --}}
-                        {{--                        <div id="qrCodeContainer" class="text-center d-none"> --}}
-                        {{--                            <div id="qrcode"></div> --}}
-                        {{--                        </div> --}}
-                        {{--                    </div> --}}
                     </div>
                 </div>
             </div>
@@ -69,6 +52,27 @@
     </div>
 
     <script>
+        // Function to show toast notification
+        function showToast(title, message, icon = 'success') {
+            const Toast = Swal.mixin({
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 3000,
+                timerProgressBar: true,
+                didOpen: (toast) => {
+                    toast.addEventListener('mouseenter', Swal.stopTimer)
+                    toast.addEventListener('mouseleave', Swal.resumeTimer)
+                }
+            });
+
+            Toast.fire({
+                icon: icon,
+                title: title,
+                text: message
+            });
+        }
+
         // Format otomatis: Tambah strip (-) setiap 2 angka
         document.getElementById('medical_record_no').addEventListener('input', function(event) {
             let value = this.value.replace(/\D/g, ''); // Hanya angka
@@ -84,65 +88,97 @@
             this.value = formatted;
         });
 
-
         document.getElementById('checkPatientForm').addEventListener('submit', async function(event) {
             event.preventDefault();
             const formData = new FormData(this);
+            const submitBtn = document.querySelector('button[type="submit"]');
 
-            const response = await fetch("{{ route('qris.generate-qr') }}", {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                }
-            });
+            try {
+                // Show loading state
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = 'Memproses...';
 
-            const res = await response.json();
-            if (res.data.qrContent) {
-                document.getElementById('qrCodeContainer').classList.remove('d-none');
-                document.getElementById('qrcode').innerHTML = '';
-                // new QRCode(document.getElementById("qrcode"), res.data.qrContent);
-                new QRCode(document.getElementById("qrcode"), {
-                    text: res.data.qrContent,
-                    width: 256,
-                    height: 256,
-                    correctLevel: QRCode.CorrectLevel
-                        .L, // Gunakan Level Koreksi Rendah (L) agar muat
-                    version: 10 // Gunakan versi QR lebih tinggi untuk string panjang
+                // Show loading SweetAlert
+                Swal.fire({
+                    title: 'Memproses...',
+                    text: 'Mohon tunggu sebentar',
+                    icon: 'info',
+                    allowOutsideClick: false,
+                    showConfirmButton: false,
+                    willOpen: () => {
+                        Swal.showLoading();
+                    }
                 });
+
+                const response = await fetch("{{ route('qris.generate-qr') }}", {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    }
+                });
+
+                const result = await response.json();
+
+                // Reset button state
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = 'Cek Data';
+
+                // Close the loading alert
+                Swal.close();
+
+                // Handle response based on status
+                if (result.code == 200) {
+                    // Success case
+                    if (result.data && result.data.qrContent) {
+                        document.getElementById('qrCodeContainer').classList.remove('d-none');
+                        document.getElementById('qrcode').innerHTML = '';
+
+                        new QRCode(document.getElementById("qrcode"), {
+                            text: result.data.qrContent,
+                            width: 256,
+                            height: 256,
+                            correctLevel: QRCode.CorrectLevel.L,
+                            version: 10
+                        });
+
+                        // Show success toast
+                        showToast('Berhasil', 'QR Code berhasil dibuat', 'success');
+                    } else if (result.message) {
+                        // Success but with a message (like "Transaksi sudah dibayar")
+                        showToast('Informasi', result.message, 'info');
+                    }
+                } else {
+                    // Error case - still use modal for errors
+                    const errorMessage = result.message || 'Terjadi kesalahan saat memproses permintaan.';
+
+                    Swal.fire({
+                        title: 'Gagal',
+                        text: errorMessage,
+                        icon: 'error',
+                        confirmButtonText: 'Coba Lagi'
+                    });
+
+                    // Hide QR code if previously shown
+                    document.getElementById('qrCodeContainer').classList.add('d-none');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+
+                // Close the loading alert first if it's still open
+                Swal.close();
+
+                Swal.fire({
+                    title: 'Error',
+                    text: 'Terjadi kesalahan pada sistem. Silakan coba lagi nanti.',
+                    icon: 'error',
+                    confirmButtonText: 'Tutup'
+                });
+
+                // Reset button state
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = 'Cek Data';
             }
-            // if (data.patient) {
-            //     document.getElementById('patientResult').classList.remove('d-none');
-            //     document.getElementById('patientName').textContent = data.patient.name;
-            //     document.getElementById('patientAge').textContent = data.patient.age;
-            //     document.getElementById('visitDate').textContent = data.patient.visit_date;
-            //
-            //     let transactionsHtml = '';
-            //     data.patient.transactions.forEach(transaction => {
-            //         transactionsHtml += `
-        //                 <tr>
-        //                     <td>${transaction.referenceNo}</td>
-        //                     <td>IDR ${transaction.amount}</td>
-        //                     <td>${transaction.status}</td>
-        //                 </tr>
-        //             `;
-            //     });
-            //     document.getElementById('transactionList').innerHTML = transactionsHtml;
-            //
-            //     if (data.qrCode) {
-            //         document.getElementById('qrCodeContainer').classList.remove('d-none');
-            //         document.getElementById('qrcode').innerHTML = '';
-            //         // new QRCode(document.getElementById("qrcode"), data.qrCode);
-            //         new QRCode(document.getElementById("qrcode"), {
-            //             text: data.qrCode,
-            //             width: 256,
-            //             height: 256,
-            //             correctLevel: QRCode.CorrectLevel
-            //                 .L, // Gunakan Level Koreksi Rendah (L) agar muat
-            //             version: 10 // Gunakan versi QR lebih tinggi untuk string panjang
-            //         });
-            //     }
-            // }
         });
     </script>
 
