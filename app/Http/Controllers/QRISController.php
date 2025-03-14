@@ -96,7 +96,7 @@ class QRISController extends Controller
 
             return $this->ok_data_res($response);
         } catch (\Exception $e) {
-            Log::error('[' . $e->getCode() . '] ' . $e->getMessage());
+            Log::error('[' . $e->getCode() . '][generateQrPatient] ' . $e->getMessage());
             return $this->error_res(500);
         }
     }
@@ -120,18 +120,20 @@ class QRISController extends Controller
         }
 
         try {
-            $response = $this->qrisService->inquiryPayment($token,  $request->original_reference_no);
-            if ($response == null) {
+            // Find transaction by reference number
+            $transaction = QrisTransaction::where('original_reference_no', $request->original_reference_no)->first();
+            if (!$transaction) {
                 return $this->fail_msg_res('Data transaksi tidak ditemukan');
             }
 
+            $response = $this->qrisService->inquiryPayment($token,  $request->original_reference_no);
             if ($response['responseCode'] != 2005100) {
                 return $this->fail_msg_res($response['responseMessage']);
             }
 
             return $this->ok_data_res($response);
         } catch (\Exception $e) {
-            Log::error('[' . $e->getCode() . '] ' . $e->getMessage());
+            Log::error('[' . $e->getCode() . '][inquiryPaymentPatient] ' . $e->getMessage());
             return $this->error_res(500);
         }
     }

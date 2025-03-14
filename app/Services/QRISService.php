@@ -156,6 +156,21 @@ class QRISService
 
         $response = Http::withHeaders($headers)->post($this->baseUrl . $endpoint, $body);
 
+        //Log::info("INFO RESPONSE INQUIRY QRIS BRIS");
+        //Log::info("response : " . $response);
+
+        if ($response->successful()) {
+            $this->savePaymentInquiry($response->json(), $originalReferenceNo, $this->terminalId, $originalReferenceNo);
+        } else {
+            Log::error('Failed to query payment', [
+                'response' => $response->json(),
+                'status' => $response->status()
+            ]);
+        }
+
+        return $response->json();
+
+        ////Dummy for testing
         // $response = [
         //     "responseCode" => "2005100",
         //     "responseMessage" => "Successful",
@@ -177,30 +192,8 @@ class QRISService
         //         "mpan" => "9360000201102921379"
         //     ]
         // ];
-
-        //Log::info("INFO RESPONSE INQUIRY QRIS BRIS");
-        //Log::info("response : " . $response);
-        // Find transaction by reference number
-        $transaction = QrisTransaction::where('original_reference_no', $originalReferenceNo)->first();
-        if (!$transaction) {
-            return null;
-        }
-
-        //$this->savePaymentInquiry($response->json(), $originalReferenceNo, $this->terminalId, $transaction);
-
-        if ($response->successful()) {
-            $this->savePaymentInquiry($response->json(), $originalReferenceNo, $this->terminalId, $transaction);
-        } else {
-            Log::error('Failed to query payment', [
-                'response' => $response->json(),
-                'status' => $response->status()
-            ]);
-        }
-
-        //return $response;
-        return $response->json();
-
-        //return null;
+        // $this->savePaymentInquiry($response, $originalReferenceNo, $this->terminalId, $transaction);
+        // return $response;
     }
 
     private function generatePartnerReferenceNo($medicalRecordNo)
@@ -399,8 +392,11 @@ class QRISService
      * @param string $terminalId
      * @return void
      */
-    protected function savePaymentInquiry(array $responseData, string $referenceNo, string $terminalId, $transaction)
+    protected function savePaymentInquiry(array $responseData, string $referenceNo, string $terminalId, $originalReferenceNo)
     {
+        // Find transaction by reference number
+        $transaction = QrisTransaction::where('original_reference_no', $originalReferenceNo)->first();
+
         // Convert transaction status code to readable status
         $statusMap = [
             '00' => 'SUCCESS',
