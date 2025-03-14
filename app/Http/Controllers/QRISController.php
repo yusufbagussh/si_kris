@@ -57,6 +57,17 @@ class QRISController extends Controller
             }
 
             $medicalNo = substr(str_replace("-", "", $request->medical_record_no), -8);
+
+            $qrisTransaction = QrisTransaction::select('partner_reference_no', 'original_reference_no', 'response_code', 'response_message', 'qr_content', 'expires_at')
+                ->where('partner_reference_no', 'like', $medicalNo . '%')
+                ->where('status', 'SUCCESS')
+                ->latest()
+                ->first();
+
+            if ($qrisTransaction) {
+                return $this->ok_msg_res('Transaksi sudah dibayar');
+            }
+
             $qrisTransaction = QrisTransaction::select('partner_reference_no', 'original_reference_no', 'response_code', 'response_message', 'qr_content', 'expires_at')
                 ->where('partner_reference_no', 'like', $medicalNo . '%')
                 ->where('status', 'PENDING')
