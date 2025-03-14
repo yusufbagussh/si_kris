@@ -436,8 +436,23 @@ class QRISNotificationController extends Controller
 
         // Di sini Anda bisa tambahkan logika bisnis lainnya
         // Misalnya: memperbarui status pesanan, mengirim notifikasi, dll.
-        /*
-         * Code here
-         */
+        $statusMap = [
+            '00' => 'SUCCESS',
+            '01' => 'INITIATED',
+            '02' => 'PAYING',
+            '03' => 'PENDING',
+            '04' => 'REFUNDED',
+            '05' => 'CANCELED',
+            '06' => 'FAILED',
+            '07' => 'NOT_FOUND',
+        ];
+
+        //Update data QRIS Transaction
+        $status = $statusMap[$paymentData['latestTransactionStatus']] ?? 'UNKNOWN';
+        $transaction->status = $status;
+        if($status == 'SUCCESS') {
+            $transaction->paid_at = now();
+        }
+        $transaction->save();
     }
 }
