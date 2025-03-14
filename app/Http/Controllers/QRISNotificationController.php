@@ -103,10 +103,10 @@ class QRISNotificationController extends Controller
                 'expiresIn' => (string)$expiresIn
             ], 200);
         } catch (\Exception $e) {
-            Log::error('Error in token generation: ' . $e->getMessage());
+            Log::error('[' . $e->getCode() . '][generateToken] ' . $e->getMessage());
             return response()->json([
                 'responseCode' => '500000',
-                'responseMessage' => 'General Error : ' . $e->getMessage()
+                'responseMessage' => 'General Error'
             ], 500);
         }
     }
@@ -268,8 +268,7 @@ class QRISNotificationController extends Controller
                 'additionalInfo' => $request->additionalInfo ?? []
             ], 200);
         } catch (\Exception $e) {
-            Log::error('Payment Notify Error', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
-
+            Log::error('[' . $e->getCode() . '][generateToken] ' . $e->getMessage());
             return response()->json([
                 'responseCode' => '5005200',
                 'responseMessage' => 'General Error'
@@ -396,13 +395,13 @@ class QRISNotificationController extends Controller
      */
     private function processPayment(array $headers, $paymentData)
     {
-        Log::info('Payment notification received', [
-            'ref_no' => $paymentData['originalReferenceNo'],
-            'partner_ref_no' => $paymentData['originalPartnerReferenceNo'],
-            'status' => $paymentData['latestTransactionStatus'] ?? 'Not provided',
-            'amount' => $paymentData['amount']['value'],
-            'currency' => $paymentData['amount']['currency']
-        ]);
+        // Log::info('Payment notification received', [
+        //     'ref_no' => $paymentData['originalReferenceNo'],
+        //     'partner_ref_no' => $paymentData['originalPartnerReferenceNo'],
+        //     'status' => $paymentData['latestTransactionStatus'] ?? 'Not provided',
+        //     'amount' => $paymentData['amount']['value'],
+        //     'currency' => $paymentData['amount']['currency']
+        // ]);
 
         $transactionId = null;
         $transaction = QrisTransaction::where('original_reference_no', $paymentData['originalReferenceNo'])->first();
@@ -450,7 +449,7 @@ class QRISNotificationController extends Controller
         //Update data QRIS Transaction
         $status = $statusMap[$paymentData['latestTransactionStatus']] ?? 'UNKNOWN';
         $transaction->status = $status;
-        if($status == 'SUCCESS') {
+        if ($status == 'SUCCESS') {
             $transaction->paid_at = now();
         }
         $transaction->save();
