@@ -100,7 +100,6 @@
                                 <label class="form-label">Nomor Referensi:</label>
                                 <input type="text" name="original_reference_no" class="form-control" required
                                     placeholder="Masukkan nomor referensi transaksi">
-                                <div class="form-text text-muted">Masukkan nomor referensi dari transaksi QRIS</div>
                             </div>
                             <button type="submit" class="btn btn-success w-100">Cek Status Pembayaran</button>
                         </form>
