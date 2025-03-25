@@ -19,6 +19,9 @@ class QRISNotificationController extends Controller
     private $briPartnerId;
     private $briPublicKey;
 
+    private QrisTransaction $qrisTransaction;
+    private QrisToken $qrisToken;
+
     public function __construct()
     {
         $this->briPartnerId = config('qris.clients.bri.partner_id');
@@ -26,6 +29,9 @@ class QRISNotificationController extends Controller
         $this->briClientSecret = config('qris.clients.bri.client_secret');
         $this->briPublicKeyPath = storage_path('app/public/keys/public_key.pem');
         $this->briPublicKey = config('qris.clients.bri.public_key');
+
+        $this->qrisTransaction = new QrisTransaction();
+        $this->qrisToken = new QrisToken();
     }
 
     /**
@@ -238,7 +244,7 @@ class QRISNotificationController extends Controller
                 ], 400);
             }
 
-            $transaction = QrisTransaction::where('partner_reference_no', $request->originalPartnerReferenceNo)->first();
+            $transaction = $this->qrisTransaction->getTransactionByReferenceNo($request->originalReferenceNo);
 
             if ($transaction == null) {
                 return response()->json([
@@ -282,15 +288,13 @@ class QRISNotificationController extends Controller
     private function validateToken($token)
     {
         // Pilihan 1: Validasi menggunakan cache
-        $tokenData = Cache::get("qris_token_{$token}");
-        if ($tokenData) {
-            return true;
-        }
+        // $tokenData = Cache::get("qris_token_{$token}");
+        // if ($tokenData) {
+        //     return true;
+        // }
 
         // Pilihan 2: Validasi menggunakan database
-        $tokenRecord = QrisToken::where('token', $token)
-            ->where('expires_at', '>', now())
-            ->first();
+        $tokenRecord = $this->qrisToken->checkExpiredToken($token);
 
         return $tokenRecord !== null;
     }
@@ -404,7 +408,7 @@ class QRISNotificationController extends Controller
         // ]);
 
         $transactionId = null;
-        $transaction = QrisTransaction::where('original_reference_no', $paymentData['originalReferenceNo'])->first();
+        $transaction = $this->qrisTransaction->getTransactionByReferenceNo($paymentData['originalReferenceNo']);
         if ($transaction != null) {
             $transactionId = $transaction->id;
         }

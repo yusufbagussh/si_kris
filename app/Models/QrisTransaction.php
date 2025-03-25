@@ -65,4 +65,41 @@ class QrisTransaction extends Model
     {
         return $this->hasOne(QrisNotification::class, 'original_reference_no', 'reference_no');
     }
+
+    public function getTransactionWithSuccessStatus($medicalNo)
+    {
+        return
+            $this->select('partner_reference_no', 'original_reference_no', 'response_code', 'response_message', 'qr_content', 'expires_at')
+            ->where('partner_reference_no', 'like', $medicalNo . '%')
+            ->where('status', 'SUCCESS')
+            ->latest()
+            ->first();
+    }
+
+    public function getTransactionNotExpired($medicalNo)
+    {
+        return
+            $this->select('partner_reference_no', 'original_reference_no', 'response_code', 'response_message', 'qr_content', 'expires_at')
+            ->where('partner_reference_no', 'like', $medicalNo . '%')
+            ->where('status', 'PENDING')
+            ->where('expires_at', '>', now())
+            ->latest()
+            ->first();
+    }
+
+    public function getTransactionByPartnerRefNo($partnerReferenceNo)
+    {
+        return
+            $this->where('partner_reference_no', $partnerReferenceNo)
+            ->latest()
+            ->first();
+    }
+
+    public function getTransactionByRefNo($referenceNo)
+    {
+        return
+            $this->where('original_reference_no', $referenceNo)
+            ->latest()
+            ->first();
+    }
 }

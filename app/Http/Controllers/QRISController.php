@@ -15,10 +15,14 @@ class QRISController extends Controller
     use MessageResponseTrait;
 
     protected QRISService $qrisService;
+    protected QrisBriToken $qrisBriToken;
+    protected QrisTransaction $qrisTransaction;
 
     public function __construct(QRISService $qrisService)
     {
         $this->qrisService = $qrisService;
+        $this->qrisBriToken = new QrisBriToken();
+        $this->qrisTransaction = new QrisTransaction();
     }
 
     // 1. Get Access Token
@@ -29,9 +33,7 @@ class QRISController extends Controller
 
     protected function getAccessTokenFromDB()
     {
-        $token = QrisBriToken::where('expires_at', '>', now())
-            ->latest()
-            ->first();
+        $token = $this->qrisBriToken->getAccessToken();
 
         return $token ? $token->token : null;
     }
@@ -50,7 +52,7 @@ class QRISController extends Controller
         }
 
         try {
-            $token = $this->getAccessTokenFromDB() ?? $this->qrisService->getAccessToken();
+            $token = $this->qrisBriToken->getAccessToken() ?? $this->qrisService->getAccessToken();
 
             if (!$token) {
                 return $this->fail_msg_res('Token tidak ditemukan');
@@ -58,24 +60,14 @@ class QRISController extends Controller
 
             $medicalNo = substr(str_replace("-", "", $request->medical_record_no), -8);
 
-            $qrisTransaction = QrisTransaction::select('partner_reference_no', 'original_reference_no', 'response_code', 'response_message', 'qr_content', 'expires_at')
-                ->where('partner_reference_no', 'like', $medicalNo . '%')
-                ->where('status', 'SUCCESS')
-                ->latest()
-                ->first();
+            $qrisTransaction = $this->qrisTransaction->getTransactionWithSuccessStatus($medicalNo);
 
             if ($qrisTransaction) {
                 return $this->ok_msg_res('Transaksi sudah dibayar');
             }
 
-            $qrisTransaction = QrisTransaction::select('partner_reference_no', 'original_reference_no', 'response_code', 'response_message', 'qr_content', 'expires_at')
-                ->where('partner_reference_no', 'like', $medicalNo . '%')
-                ->where('status', 'PENDING')
-                ->where('expires_at', '>', now())
-                ->latest()
-                ->first();
-
             //cek status transaction
+            $qrisTransaction = $this->qrisTransaction->getTransactionNotExpired($medicalNo);
 
             //Cek expired time qr
             if ($qrisTransaction) {
@@ -89,7 +81,7 @@ class QRISController extends Controller
             }
 
             $response = $this->qrisService->generateQR($token, $request->medical_record_no);
-
+            return $response;
             if ($response['responseCode'] != 2004700) {
                 return $this->fail_msg_res($response['responseMessage']);
             }
@@ -114,7 +106,7 @@ class QRISController extends Controller
             return $this->fail_msg_res($validator->errors());
         }
 
-        $token = $this->getAccessTokenFromDB() ?? $this->qrisService->getAccessToken();
+        $token = $this->qrisBriToken->getAccessToken() ?? $this->qrisService->getAccessToken();
         if (!$token) {
             return $this->fail_msg_res('Token tidak ditemukan');
         }

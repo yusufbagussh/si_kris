@@ -30,6 +30,8 @@ class QRISService
     private $publicKeyPath;
     private $timeStamp;
 
+    private QrisBriToken $qrisBriToken;
+
     public function __construct()
     {
         $this->clientIdBri = env('BRI_CLIENT_ID');
@@ -48,6 +50,8 @@ class QRISService
         $this->publicKeyPath = storage_path('app/private/keys/public_key.pem');; // Simpan private key di storage/keys
         $this->timeStamp = now()->toIso8601String();
         // $this->timeStamp = now()->format('Y-m-d\TH:i:s.vP');
+
+        $this->qrisBriToken = new QrisBriToken();
     }
 
     // 1. GET ACCESS TOKEN
@@ -111,10 +115,10 @@ class QRISService
         //Log::info("headers : " . json_encode($headers));
         //Log::info("body : " . json_encode($body));
 
-        // return [
-        //     'headers' => $headers,
-        //     'body' => $body,
-        // ];
+        return [
+            'headers' => $headers,
+            'body' => $body,
+        ];
         $response = Http::withHeaders($headers)->post($this->baseUrl . $endpoint, $body);
         //Log::info("INFO RESPONSE GEN-QR QRIS BRIS");
         //Log::info("response : " . $response);
@@ -236,9 +240,7 @@ class QRISService
      */
     protected function getAccessTokenFromDB()
     {
-        $token = QrisBriToken::where('expires_at', '>', now())
-            ->latest()
-            ->first();
+        $token = $this->qrisBriToken->getAccessToken();
 
         return $token ? $token->token : null;
     }
