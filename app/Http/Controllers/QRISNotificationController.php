@@ -15,7 +15,7 @@ class QRISNotificationController extends Controller
 {
     private $briClientKey;
     private $briClientSecret;
-    private $briPublicKeyPath;
+    //private $briPublicKeyPath;
     private $briPartnerId;
     private $briPublicKey;
 
@@ -27,7 +27,7 @@ class QRISNotificationController extends Controller
         $this->briPartnerId = config('qris.clients.bri.partner_id');
         $this->briClientKey = config('qris.clients.bri.client_id');
         $this->briClientSecret = config('qris.clients.bri.client_secret');
-        $this->briPublicKeyPath = storage_path('app/public/keys/public_key.pem');
+        //$this->briPublicKeyPath = storage_path('app/public/keys/public_key.pem');
         $this->briPublicKey = config('qris.clients.bri.public_key');
 
         $this->qrisTransaction = new QrisTransaction();
@@ -94,7 +94,7 @@ class QRISNotificationController extends Controller
             if ($validator->fails()) {
                 return response()->json([
                     'responseCode' => '4007301',
-                    'responseMessage' => 'Invalid Field Format'
+                    'responseMessage' => 'Invalid Field Format Grant Type'
                 ], 400);
             }
 
