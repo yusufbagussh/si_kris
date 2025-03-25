@@ -88,7 +88,7 @@ class QRISNotificationController extends Controller
             if ($validator->fails()) {
                 return response()->json([
                     'responseCode' => '4007301',
-                    'responseMessage' => 'Invalid Field Format'
+                    'responseMessage' => 'Invalid Field Format Grant Type'
                 ], 400);
             }
 
