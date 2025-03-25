@@ -15,7 +15,8 @@ return [
             'client_id' => env('BRI_CLIENT_ID'),
             'client_secret' => env('BRI_CLIENT_SECRET'),
             'partner_id' => env('BRI_PARTNER_ID'),
-            'public_key' => file_get_contents(storage_path('app/private/keys/public_key.pem')),
+            // 'public_key' => file_get_contents(storage_path('app/private/keys/public_key.pem')),
+            'public_key' => file_get_contents(storage_path('app/private/keys/bri/droensolo.Pub.pem')),
             'private_key' => file_get_contents(storage_path('app/private/keys/private_key.pem')),
             'description' => 'Deskripsi Client'
         ],
