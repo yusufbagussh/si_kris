@@ -108,6 +108,27 @@ return [
             // 'trust_server_certificate' => env('DB_TRUST_SERVER_CERTIFICATE', 'false'),
         ],
 
+        'medinfras_dev' => [
+            'driver' => 'sqlsrv',
+            'url' => env('DB_DEV_MEDINFRAS_URL'),
+            'host' => env('DB_DEV_MEDINFRAS_HOST', '127.0.0.1'),
+            'port' => env('DB_DEV_MEDINFRAS_PORT', '3306'),
+            'database' => env('DB_DEV_MEDINFRAS_DATABASE', 'laravel'),
+            'username' => env('DB_DEV_MEDINFRAS_USERNAME', 'root'),
+            'password' => env('DB_DEV_MEDINFRAS_PASSWORD', ''),
+            'unix_socket' => env('DB_DEV_MEDINFRAS_SOCKET', ''),
+            'charset' => env('DB_DEV_MEDINFRAS_CHARSET', 'utf8mb4'),
+            'collation' => env('DB_DEV_MEDINFRAS_COLLATION', 'utf8mb4_unicode_ci'),
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'strict' => true,
+            'engine' => null,
+            'trust_server_certificate' => true,
+            'options' => extension_loaded('pdo_mysql') ? array_filter([
+                PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
+            ]) : [],
+        ],
+
     ],
 
     /*
