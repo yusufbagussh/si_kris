@@ -18,7 +18,7 @@ class QRISNotificationController extends Controller
     private $briPartnerId;
     private $briPublicKey;
 
-    private QrisPayment $qrisTransaction;
+    private QrisPayment $qrisPayment;
     private QrisToken $qrisToken;
 
     public function __construct()
