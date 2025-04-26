@@ -29,7 +29,7 @@ class QRISNotificationController extends Controller
         //$this->briPublicKeyPath = storage_path('app/public/keys/public_key.pem');
         $this->briPublicKey = config('qris.clients.bri.public_key');
 
-        $this->qrisTransaction = new QrisPayment();
+        $this->qrisPayment = new QrisPayment();
         $this->qrisToken = new QrisToken();
     }
 
@@ -243,7 +243,7 @@ class QRISNotificationController extends Controller
                 ], 400);
             }
 
-            $transaction = $this->qrisTransaction->getTransactionByReferenceNo($request->originalReferenceNo);
+            $transaction = $this->qrisPayment->getTransactionByReferenceNo($request->originalReferenceNo);
 
             if ($transaction == null) {
                 return response()->json([
@@ -407,7 +407,7 @@ class QRISNotificationController extends Controller
         // ]);
 
         $transactionId = null;
-        $transaction = $this->qrisTransaction->getTransactionByReferenceNo($paymentData['originalReferenceNo']);
+        $transaction = $this->qrisPayment->getTransactionByReferenceNo($paymentData['originalReferenceNo']);
         if ($transaction != null) {
             $transactionId = $transaction->id;
         }

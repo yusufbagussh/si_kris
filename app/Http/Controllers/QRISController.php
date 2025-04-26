@@ -53,15 +53,15 @@ class QRISController extends Controller
         //}
 
         try {
-//            $result = DB::table('qris_transactions')
-//                ->select('medical_record_no', 'registration_no', 'billing_no', 'registration_no', 'value', 'currency', 'status')
-//                ->whereIn(DB::raw('(registration_no, billing_no, created_at)'), function ($query) {
-//                    $query->select('registration_no', 'billing_no', DB::raw('MAX(created_at)'))
-//                        ->from('qris_transactions')
-//                        ->groupBy('registration_no', 'billing_no');
-//                })
-//                ->orderBy('created_at', 'desc')
-//                ->get();
+            //            $result = DB::table('qris_transactions')
+            //                ->select('medical_record_no', 'registration_no', 'billing_no', 'registration_no', 'value', 'currency', 'status')
+            //                ->whereIn(DB::raw('(registration_no, billing_no, created_at)'), function ($query) {
+            //                    $query->select('registration_no', 'billing_no', DB::raw('MAX(created_at)'))
+            //                        ->from('qris_transactions')
+            //                        ->groupBy('registration_no', 'billing_no');
+            //                })
+            //                ->orderBy('created_at', 'desc')
+            //                ->get();
 
             $listPatientPayments = $this->patientPayment
                 ->with(['lastQrisPayment', 'patientPaymentDetail'])
@@ -98,6 +98,7 @@ class QRISController extends Controller
             'billing_list.required' => 'Informasi billing harus diisi',
             'billing_list.*.billing_no.required' => 'Nomor billing harus diisi',
             'billing_list.*.billing_amount.required' => 'Biaya tagihan harus diisi',
+            'billing_list.*.billing_amount.numeric' => 'Biaya tagihan harus berupa angka',
         ]);
 
         if ($validator->fails()) {
@@ -129,15 +130,15 @@ class QRISController extends Controller
                     return $this->ok_msg_res('Tagihan sudah dibayar');
                 }
 
-                if ($qrisPayment->expires_at > now()->format('Y-m-d H:i:s')) {
-                    return $this->ok_msg_data_res('QR Code masih aktif', [
-                        "responseCode" => $qrisPayment->response_code,
-                        "responseMessage" => $qrisPayment->response_message,
-                        "partnerReferenceNo" => $qrisPayment->partner_reference_no,
-                        "qrContent" => $qrisPayment->qr_content,
-                        "referenceNo" => $qrisPayment->original_reference_no,
-                    ]);
-                }
+                // if ($qrisPayment->expires_at > now()->format('Y-m-d H:i:s')) {
+                //     return $this->ok_msg_data_res('QR Code masih aktif', [
+                //         "responseCode" => $qrisPayment->response_code,
+                //         "responseMessage" => $qrisPayment->response_message,
+                //         "partnerReferenceNo" => $qrisPayment->partner_reference_no,
+                //         "qrContent" => $qrisPayment->qr_content,
+                //         "referenceNo" => $qrisPayment->original_reference_no,
+                //     ]);
+                // }
 
                 $response = $this->qrisService->generateQR(
                     $token,
@@ -291,8 +292,7 @@ class QRISController extends Controller
         string $medicalRecordNo,
         string $registrationNo,
         float $amount,
-    ): void
-    {
+    ): void {
         $this->qrisPayment->create([
             'patient_payment_id' => $patientPaymentID,
             'registration_no' => $registrationNo,
