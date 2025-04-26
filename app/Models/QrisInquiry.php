@@ -48,6 +48,6 @@ class QrisInquiry extends Model
      */
     public function transaction()
     {
-        return $this->belongsTo(QrisTransaction::class, 'qris_transaction_id');
+        return $this->belongsTo(QrisPayment::class, 'qris_transaction_id');
     }
 }

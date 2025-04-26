@@ -5,9 +5,9 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class QrisTransaction extends Model
+class QrisPayment extends Model
 {
-    protected $table = 'qris_transactions';
+    protected $table = 'qris_payments';
     use HasFactory;
 
     /**
@@ -16,7 +16,8 @@ class QrisTransaction extends Model
      * @var array<int, string>
      */
     protected $fillable = [
-        'registration_id',
+        'patient_payment_id',
+        'registration_no',
         'original_reference_no',
         'partner_reference_no',
         'value',
@@ -37,6 +38,8 @@ class QrisTransaction extends Model
         'expires_at',
         'paid_at',
         'last_inquiry_at',
+        'amount',
+        'medical_record_no',
     ];
 
     /**
@@ -66,40 +69,56 @@ class QrisTransaction extends Model
         return $this->hasOne(QrisNotification::class, 'original_reference_no', 'reference_no');
     }
 
+    public function patientPayment()
+    {
+        return $this->belongsTo(PatientPayment::class);
+    }
+
+    public function findLastTransactionByRegistationNo($registrationNo)
+    {
+        return
+            $this
+                ->where('registration_no', $registrationNo)
+                ->latest()
+                ->first();
+    }
+
     public function getTransactionWithSuccessStatus($medicalNo)
     {
         return
             $this->select('partner_reference_no', 'original_reference_no', 'response_code', 'response_message', 'qr_content', 'expires_at')
-            ->where('partner_reference_no', 'like', $medicalNo . '%')
-            ->where('status', 'SUCCESS')
-            ->latest()
-            ->first();
+                //->where('partner_reference_no', 'like', $medicalNo . '%')
+                ->where('registration_no', $medicalNo)
+                ->where('status', 'SUCCESS')
+                ->latest()
+                ->first();
     }
 
     public function getTransactionNotExpired($medicalNo)
     {
         return
             $this->select('partner_reference_no', 'original_reference_no', 'response_code', 'response_message', 'qr_content', 'expires_at')
-            ->where('partner_reference_no', 'like', $medicalNo . '%')
-            ->where('status', 'PENDING')
-            ->where('expires_at', '>', now())
-            ->latest()
-            ->first();
+                //->where('partner_reference_no', 'like', $medicalNo . '%')
+                ->where('registration_no', $medicalNo)
+                ->where('status', 'PENDING')
+                ->where('expires_at', '>', now())
+                ->latest()
+                ->first();
     }
 
     public function getTransactionByPartnerRefNo($partnerReferenceNo)
     {
         return
             $this->where('partner_reference_no', $partnerReferenceNo)
-            ->latest()
-            ->first();
+                ->latest()
+                ->first();
     }
 
     public function getTransactionByRefNo($referenceNo)
     {
         return
             $this->where('original_reference_no', $referenceNo)
-            ->latest()
-            ->first();
+                ->latest()
+                ->first();
     }
 }

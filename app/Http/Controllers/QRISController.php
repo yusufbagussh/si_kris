@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\PatientPayment;
+use App\Models\PatientPaymentDetail;
 use App\Models\QrisBriToken;
-use App\Models\QrisTransaction;
+use App\Models\QrisPayment;
 use App\Services\QRISService;
 use App\Traits\MessageResponseTrait;
 use Illuminate\Http\Request;
@@ -14,15 +16,20 @@ class QRISController extends Controller
 {
     use MessageResponseTrait;
 
-    protected QRISService $qrisService;
-    protected QrisBriToken $qrisBriToken;
-    protected QrisTransaction $qrisTransaction;
+    private QRISService $qrisService;
+    private QrisBriToken $qrisBriToken;
+    private QrisPayment $qrisTransaction;
+    private PatientPayment $patientPayment;
+    private PatientPaymentDetail $patientPaymentDetail;
+    private QrisPayment $qrisPayment;
 
     public function __construct(QRISService $qrisService)
     {
         $this->qrisService = $qrisService;
         $this->qrisBriToken = new QrisBriToken();
-        $this->qrisTransaction = new QrisTransaction();
+        $this->qrisPayment = new QrisPayment();
+        $this->patientPayment = new PatientPayment();
+        $this->patientPaymentDetail = new PatientPaymentDetail();
     }
 
     // 1. Get Access Token
@@ -30,6 +37,43 @@ class QRISController extends Controller
     // {
     //     return response()->json($this->qrisService->getAccessToken());
     // }
+
+    public function getListInfoPatientPayment(Request $request)
+    {
+        // $validator = Validator::make($request->all(), [
+        //     'medical_record_no' => 'required|string',
+        //     'registration_no' => 'required',
+        // ], [
+        //     'medical_record_no.required' => 'Nomor rekam medis harus diisi',
+        //     'registration_no.required' => 'Nomor registrasi harus diisi',
+        // ]);
+
+        // if ($validator->fails()) {
+        //     return $this->fail_msg_res($validator->errors());
+        //}
+
+        try {
+//            $result = DB::table('qris_transactions')
+//                ->select('medical_record_no', 'registration_no', 'billing_no', 'registration_no', 'value', 'currency', 'status')
+//                ->whereIn(DB::raw('(registration_no, billing_no, created_at)'), function ($query) {
+//                    $query->select('registration_no', 'billing_no', DB::raw('MAX(created_at)'))
+//                        ->from('qris_transactions')
+//                        ->groupBy('registration_no', 'billing_no');
+//                })
+//                ->orderBy('created_at', 'desc')
+//                ->get();
+
+            $listPatientPayments = $this->patientPayment
+                ->with(['lastQrisPayment', 'patientPaymentDetail'])
+                ->orderBy('created_at', 'desc')
+                ->get();
+
+            return $this->ok_data_res($listPatientPayments);
+        } catch (\Exception $e) {
+            Log::error('[' . $e->getCode() . '][getListInfoPatientPayment] ' . $e->getMessage());
+            return $this->error_res(500);
+        }
+    }
 
     protected function getAccessTokenFromDB()
     {
@@ -42,9 +86,18 @@ class QRISController extends Controller
     public function generateQrPatient(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'medical_record_no' => 'required',
+            'medical_record_no' => 'required|string',
+            'registration_no' => 'required',
+            'billing_list' => 'required|array',
+            'total_amount' => 'required|numeric',
+            'billing_list.*.billing_no' => 'required|string',
+            'billing_list.*.billing_amount' => 'required|numeric',
         ], [
-            'medical_record_no.required' => 'Nomor Rekam Medis harus diisi',
+            'medical_record_no.required' => 'Nomor rekam medis harus diisi',
+            'registration_no.required' => 'Nomor registrasi harus diisi',
+            'billing_list.required' => 'Informasi billing harus diisi',
+            'billing_list.*.billing_no.required' => 'Nomor billing harus diisi',
+            'billing_list.*.billing_amount.required' => 'Biaya tagihan harus diisi',
         ]);
 
         if ($validator->fails()) {
@@ -58,33 +111,116 @@ class QRISController extends Controller
                 return $this->fail_msg_res('Token tidak ditemukan');
             }
 
-            $medicalNo = substr(str_replace("-", "", $request->medical_record_no), -8);
+            $qrisPayment = $this->qrisPayment
+                ->with(['patientPayment', 'patientPayment.patientPaymentDetail'])
+                //->where('registration_no', $request->registration_no)
+                ->whereHas('patientPayment', function ($query) use ($request) {
+                    $query->where('registration_no', $request->registration_no);
+                })
+                ->whereHas('patientPayment.patientPaymentDetail', function ($query) use ($request) {
+                    $listBillingNo = collect($request->billing_list)->pluck('billing_no')->toArray();
+                    $query->whereIn('billing_no', $listBillingNo);
+                })
+                ->latest()
+                ->first();
 
-            $qrisTransaction = $this->qrisTransaction->getTransactionWithSuccessStatus($medicalNo);
+            if ($qrisPayment) {
+                if ($qrisPayment->status == 'SUCCESS') {
+                    return $this->ok_msg_res('Tagihan sudah dibayar');
+                }
 
-            if ($qrisTransaction) {
-                return $this->ok_msg_res('Transaksi sudah dibayar');
+                if ($qrisPayment->expires_at > now()->format('Y-m-d H:i:s')) {
+                    return $this->ok_msg_data_res('QR Code masih aktif', [
+                        "responseCode" => $qrisPayment->response_code,
+                        "responseMessage" => $qrisPayment->response_message,
+                        "partnerReferenceNo" => $qrisPayment->partner_reference_no,
+                        "qrContent" => $qrisPayment->qr_content,
+                        "referenceNo" => $qrisPayment->original_reference_no,
+                    ]);
+                }
+
+                $response = $this->qrisService->generateQR(
+                    $token,
+                    $request->registration_no,
+                    $request->total_amount,
+                );
+
+                if ($response['responseCode'] != 2004700) {
+                    return $this->fail_msg_res($response['responseMessage']);
+                }
+
+                $this->saveGeneratedQR(
+                    $qrisPayment->patientPayment->id,
+                    $response,
+                    env('QRIS_TERMINAL_ID'),
+                    env('QRIS_MERCHANT_ID'),
+                    $request->medical_record_no,
+                    $request->registration_no,
+                    $request->total_amount,
+                );
+
+                return $this->ok_data_res($response);
             }
 
-            //cek status transaction
-            $qrisTransaction = $this->qrisTransaction->getTransactionNotExpired($medicalNo);
+            //$qrisTransaction = $this->qrisPayment->findLastTransactionByRegistationNo($request->registration_no);
 
-            //Cek expired time qr
-            if ($qrisTransaction) {
-                return $this->ok_data_res([
-                    "responseCode" => $qrisTransaction->response_code,
-                    "responseMessage" => $qrisTransaction->response_message,
-                    "partnerReferenceNo" => $qrisTransaction->partner_reference_no,
-                    "qrContent" => $qrisTransaction->qr_content,
-                    "referenceNo" => $qrisTransaction->original_reference_no,
-                ]);
-            }
+            //if ($qrisTransaction) {
+            //    //Cek status transaksi
+            //    if ($qrisTransaction->status == 'SUCCESS') {
+            //        return $this->ok_msg_res('Transaksi sudah dibayar');
+            //    }
 
-            $response = $this->qrisService->generateQR($token, $request->medical_record_no);
-            return $response;
+            //    //Cek expired time qr
+            //    if ($qrisTransaction->expires_at > now()) {
+            //        return $this->ok_msg_data_res('QR Code belum expired', [
+            //            "responseCode" => $qrisTransaction->response_code,
+            //            "responseMessage" => $qrisTransaction->response_message,
+            //            "partnerReferenceNo" => $qrisTransaction->partner_reference_no,
+            //            "qrContent" => $qrisTransaction->qr_content,
+            //            "referenceNo" => $qrisTransaction->original_reference_no,
+            //        ]);
+            //    }
+            //}
+
+            $response = $this->qrisService->generateQR(
+                $token,
+                $request->registration_no,
+                $request->total_amount,
+            );
+
             if ($response['responseCode'] != 2004700) {
                 return $this->fail_msg_res($response['responseMessage']);
             }
+
+            // Save transaction to database
+            $patientPayment = $this->patientPayment->create([
+                'medical_record_no' => $request->medical_record_no,
+                'registration_no' => $request->registration_no,
+                'total_amount' => $request->total_amount,
+                'payment_method' => 'QRIS BRI',
+                'payment_method_code' => '021',
+            ]);
+
+            foreach ($request->billing_list as $billing) {
+                $billingNo = $billing['billing_no'];
+                $amount = $billing['billing_amount'];
+
+                $this->patientPaymentDetail->create([
+                    'patient_payment_id' => $patientPayment->id,
+                    'billing_no' => $billingNo,
+                    'billing_amount' => $amount,
+                ]);
+            }
+
+            $this->saveGeneratedQR(
+                $patientPayment->id,
+                $response,
+                env('QRIS_TERMINAL_ID'),
+                env('QRIS_MERCHANT_ID'),
+                $request->medical_record_no,
+                $request->registration_no,
+                $request->total_amount,
+            );
 
             return $this->ok_data_res($response);
         } catch (\Exception $e) {
@@ -99,7 +235,7 @@ class QRISController extends Controller
         $validator = Validator::make($request->all(), [
             'original_reference_no' => 'required',
         ], [
-            'original_reference_no.required' => 'Nomor apotek harus diisi',
+            'original_reference_no.required' => 'Nomer referensi original harus diisi',
         ]);
 
         if ($validator->fails()) {
@@ -113,12 +249,15 @@ class QRISController extends Controller
 
         try {
             // Find transaction by reference number
-            $transaction = QrisTransaction::where('original_reference_no', $request->original_reference_no)->first();
-            if (!$transaction) {
+            $qrisPayment = $this->qrisPayment
+                ->where('original_reference_no', $request->original_reference_no)
+                ->first();
+
+            if (!$qrisPayment) {
                 return $this->fail_msg_res('Data transaksi tidak ditemukan');
             }
 
-            $response = $this->qrisService->inquiryPayment($token,  $request->original_reference_no);
+            $response = $this->qrisService->inquiryPayment($token, $request->original_reference_no);
             if ($response['responseCode'] != 2005100) {
                 return $this->fail_msg_res($response['responseMessage']);
             }
@@ -130,6 +269,49 @@ class QRISController extends Controller
         }
     }
 
+    /**
+     * Save generated QR data to database
+     *
+     * @param $patientPaymentID
+     * @param array $responseData
+     * @param string $partnerReferenceNo
+     * @param string $merchantId
+     * @param string $terminalId
+     * @param string $medicalRecordNo
+     * @param string $registrationNo
+     * @param string $billingNo
+     * @param float $amount
+     * @return void
+     */
+    private function saveGeneratedQR(
+        $patientPaymentID,
+        array $responseData,
+        string $merchantId,
+        string $terminalId,
+        string $medicalRecordNo,
+        string $registrationNo,
+        float $amount,
+    ): void
+    {
+        $this->qrisPayment->create([
+            'patient_payment_id' => $patientPaymentID,
+            'registration_no' => $registrationNo,
+            'original_reference_no' => $responseData['referenceNo'],
+            'partner_reference_no' => $responseData['partnerReferenceNo'],
+            'value' => $amount,
+            //currency
+            'merchant_id' => $merchantId,
+            'terminal_id' => $terminalId,
+            'qr_content' => $responseData['qrContent'],
+            'status' => 'PENDING',
+            'response_code' => $responseData['responseCode'],
+            'response_message' => $responseData['responseMessage'],
+            'expires_at' => now()->addSeconds(119),
+            //new data
+            'medical_record_no' => $medicalRecordNo,
+            //'billing_no' => $billingNo,
+        ]);
+    }
 
     // public function checkPatient(Request $request)
     // {

@@ -14,7 +14,7 @@ return new class extends Migration {
             $table->id();
             $table->string('original_reference_no');
             $table->string('partner_reference_no')->unique();
-            $table->string('registration_id');
+            $table->string('registration_no');
             $table->decimal('value', 20, 2);
             $table->string('currency')->default('IDR');
             $table->string('merchant_id');

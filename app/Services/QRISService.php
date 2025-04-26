@@ -4,7 +4,7 @@ namespace App\Services;
 
 use App\Models\QrisBriToken;
 use App\Models\QrisInquiry;
-use App\Models\QrisTransaction;
+use App\Models\QrisPayment;
 use App\Traits\MessageResponseTrait;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -90,16 +90,14 @@ class QRISService
         }
     }
 
-    public function generateQR($token, $medicalRecordNo)
+    public function generateQR($token, $registrationNo, $totalAmount)
     {
         //$token = $this->getAccessTokenFromDB() ?? $this->getAccessToken();
-        $partnerReferenceNo = $this->generatePartnerReferenceNo($medicalRecordNo);
-
-        $amount = 100;
+        $partnerReferenceNo = $this->generatePartnerReferenceNoFromReg($registrationNo);
         $timestamp = $this->timeStamp;
         $endpoint = "/snap/v1.1/qr/qr-mpm-generate-qr";
 
-        $formattedAmount = number_format($amount, 2, '.', '');
+        $formattedAmount = number_format($totalAmount, 2, '.', '');
         $body = [
             'partnerReferenceNo' => $partnerReferenceNo,
             'amount' => [
@@ -115,18 +113,15 @@ class QRISService
         //Log::info("headers : " . json_encode($headers));
         //Log::info("body : " . json_encode($body));
 
-        return [
-            'headers' => $headers,
-            'body' => $body,
-        ];
+        //return [
+        //    'headers' => $headers,
+        //    'body' => $body,
+        //];
+
         $response = Http::withHeaders($headers)->post($this->baseUrl . $endpoint, $body);
         //Log::info("INFO RESPONSE GEN-QR QRIS BRIS");
         //Log::info("response : " . $response);
-
-        if ($response->successful()) {
-            // Save QR data to database
-            $this->saveGeneratedQR($response->json(), $partnerReferenceNo, $medicalRecordNo, $amount, $this->merchantId, $this->terminalId);
-        } else {
+        if (!$response->successful()) {
             Log::error('Failed to query payment', [
                 'response' => $response->json(),
                 'status' => $response->status()
@@ -209,6 +204,15 @@ class QRISService
 
         return $medicalId . $timestamp;
     }
+
+    private function generatePartnerReferenceNoFromReg($registrationNo)
+    {
+        $exploadRegistrationNo = explode("/", trim($registrationNo)); //13 digit
+        $randomSuffix = str_pad(mt_rand(0, 99999), 5, '0', STR_PAD_LEFT);
+        $registrationNo = $exploadRegistrationNo[1] . $exploadRegistrationNo[2] . $randomSuffix;
+        return $registrationNo;
+    }
+
 
     private function generateExternalId()
     {
@@ -333,40 +337,6 @@ class QRISService
 
     // 6. GENERATE EXTERNAL ID (UUID v4 - 36 karakter)
 
-    /**
-     * Save generated QR data to database
-     *
-     * @param array $responseData
-     * @param string $partnerReferenceNo
-     * @param float $amount
-     * @param string $merchantId
-     * @param string $terminalId
-     * @return void
-     */
-    protected function saveGeneratedQR(
-        array $responseData,
-        string $partnerReferenceNo,
-        string $registrationId,
-        float $amount,
-        string $merchantId,
-        string $terminalId
-    ) {
-        QrisTransaction::create([
-            'original_reference_no' => $responseData['referenceNo'],
-            'partner_reference_no' => $partnerReferenceNo,
-            'registration_id' => $registrationId,
-            'value' => $amount,
-            //currency
-            'merchant_id' => $merchantId,
-            'terminal_id' => $terminalId,
-            'qr_content' => $responseData['qrContent'],
-            'status' => 'PENDING',
-            'response_code' => $responseData['responseCode'],
-            'response_message' => $responseData['responseMessage'],
-            'expires_at' => now()->addSeconds(119),
-        ]);
-    }
-
     // 8. GENERATE SIGNATURE RSA (DIGUNAKAN UNTUK GET TOKEN)
 
     // 9. VERIFY SIGNATURE
@@ -397,7 +367,7 @@ class QRISService
     protected function savePaymentInquiry(array $responseData, string $referenceNo, string $terminalId, $originalReferenceNo)
     {
         // Find transaction by reference number
-        $transaction = QrisTransaction::where('original_reference_no', $originalReferenceNo)->first();
+        $transaction = QrisPayment::where('original_reference_no', $originalReferenceNo)->first();
 
         // Convert transaction status code to readable status
         $statusMap = [

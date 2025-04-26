@@ -3,10 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\QrisNotification;
+use App\Models\QrisPayment;
 use App\Models\QrisToken;
-use App\Models\QrisTransaction;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
@@ -19,7 +18,7 @@ class QRISNotificationController extends Controller
     private $briPartnerId;
     private $briPublicKey;
 
-    private QrisTransaction $qrisTransaction;
+    private QrisPayment $qrisTransaction;
     private QrisToken $qrisToken;
 
     public function __construct()
@@ -30,7 +29,7 @@ class QRISNotificationController extends Controller
         //$this->briPublicKeyPath = storage_path('app/public/keys/public_key.pem');
         $this->briPublicKey = config('qris.clients.bri.public_key');
 
-        $this->qrisTransaction = new QrisTransaction();
+        $this->qrisTransaction = new QrisPayment();
         $this->qrisToken = new QrisToken();
     }
 
@@ -176,9 +175,9 @@ class QRISNotificationController extends Controller
             }
 
             if (preg_match(
-                '/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})[+-](\d{2}):(\d{2})$/',
-                $request->header('X-TIMESTAMP')
-            ) !== 1) {
+                    '/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})[+-](\d{2}):(\d{2})$/',
+                    $request->header('X-TIMESTAMP')
+                ) !== 1) {
                 return response()->json([
                     'responseCode' => '4005201',
                     'responseMessage' => 'Invalid Field Format: timestamp must be in ISO 8601 format'
