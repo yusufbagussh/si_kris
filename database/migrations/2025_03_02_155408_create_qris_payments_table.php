@@ -10,7 +10,7 @@ return new class extends Migration {
      */
     public function up(): void
     {
-        Schema::create('qris_transactions', function (Blueprint $table) {
+        Schema::create('qris_payments', function (Blueprint $table) {
             $table->id();
             $table->string('original_reference_no');
             $table->string('partner_reference_no')->unique();
@@ -37,6 +37,6 @@ return new class extends Migration {
      */
     public function down(): void
     {
-        Schema::dropIfExists('qris_transactions');
+        Schema::dropIfExists('qris_payments');
     }
 };

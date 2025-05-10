@@ -440,17 +440,24 @@ class QRISService
         $authHeader = $request->header('Authorization');
         $token = Str::substr($authHeader, 7);
         $timestamp = $this->timeStamp;
-        $endpoint = "/snap/v1.1/qr/qr-mpm-notify";
+        $endpoint = "/api/snap/v1.1/qr/qr-mpm-notify";
         $body = $request->all();
 
 
-        $hashedBody = strtolower(hash("sha256", json_encode($body)));
+        //$hashedBody = strtolower(hash("sha256", json_encode($body)));
+        $hashedBody = bin2hex(strtolower(hash('sha256', json_encode($body))));
+
         $stringToSign = "POST:$endpoint:$token:$hashedBody:$timestamp";
+        //$stringToSign2 = "POST:/api/snap/v1.1/qr/qr-mpm-notify:WElcNRChF8zyCxDaaiWTooqWrENNWMhI:$hashedBody2:2025-05-05T10:33:38+07:00";
+
         Log::info("StringToSign: " . $stringToSign);
         Log::info("KEY HMAC: " . $this->clientSecretBri);
         // $signature = hash_hmac('sha512', $stringToSign, $this->$this->clientSecretBri);
         $signature = base64_encode(hash_hmac('sha512', $stringToSign, $this->clientSecretBri, true));
+        //$signature2 = base64_encode(hash_hmac('sha512', $stringToSign2, $this->clientSecretBri, true));
         Log::info("Generated Signature: " . $signature);
+
+        // $decodedHash = hex2bin('66656131363339303731356462323364663762346439376634643563386632333939336331336435393066326635363061663861386362646238366663313534');
 
         $headers = [
             'Authorization' => "Bearer $token",
@@ -460,6 +467,9 @@ class QRISService
             'CHANNEL-ID' => $this->channelIdBri,
             'X-EXTERNAL-ID' => $this->externalId,
             'X-SIGNATURE' => $signature,
+            //'X-SIGNATURE-2' => $signature2,
+            //'HASHED' => $hashedBody,
+            //'HASHEDV2' => $hashedBody2,
         ];
 
         return [

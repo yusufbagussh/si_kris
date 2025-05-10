@@ -12,7 +12,7 @@ return new class extends Migration {
     {
         Schema::create('qris_notifications', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('qris_transaction_id')->nullable()->constrained('qris_transactions');
+            $table->foreignId('qris_transaction_id')->nullable()->constrained('qris_payments');
             $table->string('original_reference_no');
             $table->string('partner_reference_no');
             $table->string('external_id')->unique();

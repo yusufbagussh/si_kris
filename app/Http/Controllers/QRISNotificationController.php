@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\QrisNotificationEvent;
 use App\Models\QrisNotification;
 use App\Models\QrisPayment;
 use App\Models\QrisToken;
@@ -144,18 +145,22 @@ class QRISNotificationController extends Controller
 
             $authHeader = $request->header('Authorization');
             if (!$authHeader || !Str::startsWith($authHeader, 'Bearer ')) {
-                return response()->json([
+                $response = [
                     'responseCode' => '4017301',
                     'responseMessage' => 'Invalid Token (B2B)'
-                ], 401);
+                ];
+                Log::info('Payment Notify Response', ['status' => 401, 'response' => $response]);
+                return response()->json($response, 401);
             }
 
             $token = Str::substr($authHeader, 7);
             if (!$this->validateToken($token)) {
-                return response()->json([
+                $response = [
                     'responseCode' => '4017301',
                     'responseMessage' => 'Invalid Token (B2B)'
-                ], 401);
+                ];
+                Log::info('Payment Notify Response', ['status' => 401, 'response' => $response]);
+                return response()->json($response, 401);
             }
 
             $requiredHeaders = [
@@ -167,21 +172,25 @@ class QRISNotificationController extends Controller
 
             foreach ($requiredHeaders as $header) {
                 if (!$request->header($header)) {
-                    return response()->json([
+                    $response = [
                         'responseCode' => '4005202',
                         'responseMessage' => "Invalid Mandatory Field: Header $header missing"
-                    ], 400);
+                    ];
+                    Log::info('Payment Notify Response', ['status' => 400, 'response' => $response]);
+                    return response()->json($response, 400);
                 }
             }
 
             if (preg_match(
-                    '/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})[+-](\d{2}):(\d{2})$/',
-                    $request->header('X-TIMESTAMP')
-                ) !== 1) {
-                return response()->json([
+                '/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})[+-](\d{2}):(\d{2})$/',
+                $request->header('X-TIMESTAMP')
+            ) !== 1) {
+                $response = [
                     'responseCode' => '4005201',
                     'responseMessage' => 'Invalid Field Format: timestamp must be in ISO 8601 format'
-                ], 400);
+                ];
+                Log::info('Payment Notify Response', ['status' => 400, 'response' => $response]);
+                return response()->json($response, 400);
             }
 
             $validatorExternalID = Validator::make($request->header(), [
@@ -189,17 +198,24 @@ class QRISNotificationController extends Controller
             ]);
 
             if ($validatorExternalID->fails()) {
-                return response()->json([
+                $response = [
                     'responseCode' => '4095200',
                     'responseMessage' => 'conflict'
-                ], 409);
+                ];
+                Log::info('Payment Notify Response', ['status' => 409, 'response' => $response]);
+                return response()->json($response, 409);
             }
 
+            Log::info("CLIENT SECRET REQUEST: " . $this->briClientSecret);
+
+
             if (!$this->verifyNotificationSignature($request)) {
-                return response()->json([
+                $response = [
                     'responseCode' => '4017300',
                     'responseMessage' => 'Unauthorized Signature'
-                ], 401);
+                ];
+                Log::info('Payment Notify Response', ['status' => 401, 'response' => $response]);
+                return response()->json($response, 401);
             }
 
             $requiredFields = [
@@ -212,18 +228,22 @@ class QRISNotificationController extends Controller
 
             foreach ($requiredFields as $field) {
                 if (!$request->has($field)) {
-                    return response()->json([
+                    $response = [
                         'responseCode' => '4005202',
                         'responseMessage' => "Invalid Mandatory Field: $field"
-                    ], 400);
+                    ];
+                    Log::info('Payment Notify Response', ['status' => 400, 'response' => $response]);
+                    return response()->json($response, 400);
                 }
             }
 
             if (!$request->has('amount.value') || !$request->has('amount.currency')) {
-                return response()->json([
+                $response = [
                     'responseCode' => '4005202',
                     'responseMessage' => 'Invalid Mandatory Field in amount object'
-                ], 400);
+                ];
+                Log::info('Payment Notify Response', ['status' => 400, 'response' => $response]);
+                return response()->json($response, 400);
             }
 
             // Validate required fields
@@ -237,19 +257,23 @@ class QRISNotificationController extends Controller
             ]);
 
             if ($validator->fails()) {
-                return response()->json([
+                $response = [
                     'responseCode' => '4005201',
                     'responseMessage' => 'Invalid Field Format: ' . implode(', ', $validator->errors()->all())
-                ], 400);
+                ];
+                Log::info('Payment Notify Response', ['status' => 400, 'response' => $response]);
+                return response()->json($response, 400);
             }
 
-            $transaction = $this->qrisPayment->getTransactionByReferenceNo($request->originalReferenceNo);
+            $transaction = QrisPayment::where('partner_reference_no', $request->originalPartnerReferenceNo)->first();
 
             if ($transaction == null) {
-                return response()->json([
+                $response = [
                     'responseCode' => '4045200',
                     'responseMessage' => 'Transaction Not Found. Invalid Number'
-                ], 404);
+                ];
+                Log::info('Payment Notify Response', ['status' => 404, 'response' => $response]);
+                return response()->json($response, 404);
             }
 
             $headers = [
@@ -267,17 +291,28 @@ class QRISNotificationController extends Controller
 
             $this->processPayment($headers, $request->all());
 
-            return response()->json([
+            event(new QrisNotificationEvent($request->originalReferenceNo));
+
+            $response = [
                 'responseCode' => '2005200',
                 'responseMessage' => 'Successfull',
-                'additionalInfo' => $request->additionalInfo ?? []
-            ], 200);
+                'additionalInfo' => [
+                    'reffId' => $request->input('AdditionalInfo.ReffId') ?? null,
+                    'issuerName' => $request->input('AdditionalInfo.issuerName') ?? null,
+                    'issuerRrn' => $request->input('AdditionalInfo.issuerRrn') ?? null,
+                ] ?? []
+            ];
+
+            Log::info('Payment Notify Response', ['status' => 200, 'response' => $response]);
+            return response()->json($response, 200);
         } catch (\Exception $e) {
             Log::error('[' . $e->getCode() . '][generateToken] ' . $e->getMessage());
-            return response()->json([
+            $response = [
                 'responseCode' => '5005200',
                 'responseMessage' => 'General Error'
-            ], 500);
+            ];
+            Log::info('Payment Notify Response', ['status' => 500, 'response' => $response]);
+            return response()->json($response, 500);
         }
     }
 
@@ -320,8 +355,8 @@ class QRISNotificationController extends Controller
 
             // Buat string to sign (sama seperti di generateSignature)
             $method = 'POST';
-            $endpoint = '/snap/v1.1/qr/qr-mpm-notify';
-            $hashedBody = strtolower(hash('sha256', $requestBody));
+            $endpoint = '/api/snap/v1.1/qr/qr-mpm-notify';
+            $hashedBody = bin2hex(strtolower(hash('sha256', $requestBody)));
             $stringToSign = "$method:$endpoint:$token:$hashedBody:$timestamp";
 
             Log::info("StringToSign (Verification): " . $stringToSign);
@@ -407,7 +442,7 @@ class QRISNotificationController extends Controller
         // ]);
 
         $transactionId = null;
-        $transaction = $this->qrisPayment->getTransactionByReferenceNo($paymentData['originalReferenceNo']);
+        $transaction = $this->qrisPayment->getTransactionByRefNo($paymentData['originalReferenceNo']);
         if ($transaction != null) {
             $transactionId = $transaction->id;
         }
@@ -427,9 +462,9 @@ class QRISNotificationController extends Controller
             'bank_code' => $paymentData['bankCode'] ?? null,
             'session_id' => $paymentData['sessionID'] ?? null,
             'external_store_id' => $paymentData['externalStoreID'] ?? null,
-            'reff_id' => $paymentData['additionalInfo']['reffId'] ?? null,
-            'issuer_name' => $paymentData['additionalInfo']['issuerName'] ?? null,
-            'issuer_rrn' => $paymentData['additionalInfo']['issuerRrn'] ?? null,
+            'reff_id' => $paymentData['AdditionalInfo']['ReffId'] ?? null,
+            'issuer_name' => $paymentData['AdditionalInfo']['issuerName'] ?? null,
+            'issuer_rrn' => $paymentData['AdditionalInfo']['issuerRrn'] ?? null,
             'raw_request' => json_encode($paymentData),
             'raw_header' => json_encode($headers),
         ];
