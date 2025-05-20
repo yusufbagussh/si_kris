@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services;
+namespace App\Libraries\Medinfras;
 
 use Carbon\Carbon;
 use GuzzleHttp\Client;
@@ -9,7 +9,7 @@ use GuzzleHttp\Exception\ConnectException;
 use GuzzleHttp\Psr7\Message;
 use Illuminate\Support\Facades\Log;
 
-class MedinfrasService
+class KasirService
 {
     private $consId, $secretKey, $headers, $clients, $signature, $timestamp;
 
@@ -20,9 +20,9 @@ class MedinfrasService
         //    $this->secretKey = env('API_MEDINFRAS_LIVE_SECRET_KEY');
         //    $url = env('API_URL_MEDINFRAS_LIVE');
         //} else {
-            $this->consId = env('API_MEDINFRAS_WS_CONS_ID');
-            $this->secretKey = env('API_MEDINFRAS_WS_SECRET_KEY');
-            $url = env('API_URL_MEDINFRAS_WS');
+        $this->consId = env('API_MEDINFRAS_WS_CONS_ID');
+        $this->secretKey = env('API_MEDINFRAS_WS_SECRET_KEY');
+        $url = env('API_URL_MEDINFRAS_WS');
         //}
 
         $this->clients = new Client([
@@ -89,7 +89,7 @@ class MedinfrasService
     public function post($src, $data = [])
     {
         $this->headers['Content-Type'] = 'application/json';
-        Log::info('MedinfrasService post', ['src' => $src, 'header'=> $this->headers, 'data' => $data]);
+        Log::info('KasirService post', ['src' => $src, 'header' => $this->headers, 'data' => $data]);
         try {
             $response = $this->clients->request(
                 'POST',

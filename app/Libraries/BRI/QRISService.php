@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services;
+namespace App\Libraries\BRI;
 
 use App\Models\QrisBriToken;
 use App\Models\QrisInquiry;

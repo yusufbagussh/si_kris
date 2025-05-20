@@ -1,12 +1,14 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\APM\QRIS;
 
 use App\Events\QrisNotificationEvent;
+use App\Http\Controllers\Controller;
 use App\Models\QrisNotification;
 use App\Models\QrisPayment;
 use App\Models\QrisToken;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
@@ -18,17 +20,22 @@ class QRISNotificationController extends Controller
     //private $briPublicKeyPath;
     private $briPartnerId;
     private $briPublicKey;
+    private $apmWebhookUrl;
+    private $apmWebhookSecret;
 
     private QrisPayment $qrisPayment;
     private QrisToken $qrisToken;
 
     public function __construct()
     {
+        //$this->briPublicKeyPath = storage_path('app/public/keys/public_key.pem');
         $this->briPartnerId = config('qris.clients.bri.partner_id');
         $this->briClientKey = config('qris.clients.bri.client_id');
         $this->briClientSecret = config('qris.clients.bri.client_secret');
-        //$this->briPublicKeyPath = storage_path('app/public/keys/public_key.pem');
         $this->briPublicKey = config('qris.clients.bri.public_key');
+
+        $this->apmWebhookUrl = config('qris.clients.webhook.url');
+        $this->apmWebhookSecret = config('qris.clients.webhook.secret');
 
         $this->qrisPayment = new QrisPayment();
         $this->qrisToken = new QrisToken();
@@ -289,9 +296,48 @@ class QRISNotificationController extends Controller
                 'channel-id' => $request->header('channel-id') ?? null,
             ];
 
-            $this->processPayment($headers, $request->all());
+            $this->processPayment($headers, $request->all(), $transaction);
 
-            event(new QrisNotificationEvent($request->originalReferenceNo));
+            if ($request->transactionStatusDesc == 'success') {
+                $transaction->load(['patientPayment.patientPaymentDetail']);
+
+                // Kirim event notifikasi ke sistem lain
+                $data = [
+                    "registrationNo" => $transaction->patientPayment->registration_no,
+                    "remarks" => "Pembayaran melalui {$request->input('AdditionalInfo.issuerName')} oleh {$request->destinationAccountName}",
+                    "referenceNo" => $transaction->original_reference_no,
+                    "transactionStatusDesc" => $request->transactionStatusDesc,
+                    "issuerName" => $request->input('AdditionalInfo.issuerName'),
+                    "paymentAmount" => intval($request->input('amount.value')),
+                ];
+
+                $billingList = [];
+                foreach ($transaction->patientPayment->patientPaymentDetail as $detail) {
+                    $billingAmount = intval($detail->billing_amount);
+                    $billingList[] = "{$detail->billing_no}-{$billingAmount}";
+                }
+
+                $data['billList'] = implode(',', $billingList);
+
+                $headersWebhook = [
+                    'Content-Type' => 'application/json',
+                    'X-Signature' =>  hash_hmac('sha256', json_encode($data), $this->apmWebhookSecret),
+                ];
+
+                Log::info('Callback APM Request', [
+                    'headers' => $headersWebhook,
+                    'data' => $data,
+                ]);
+
+                $response = Http::withHeaders($headersWebhook)->post($this->apmWebhookUrl, $data);
+
+                Log::info('Callback APM Response', [
+                    'status' => $response->status(),
+                    'response' => $response->json()
+                ]);
+            }
+
+            //event(new QrisNotificationEvent($request->originalReferenceNo));
 
             $response = [
                 'responseCode' => '2005200',
@@ -431,7 +477,7 @@ class QRISNotificationController extends Controller
     /**
      * Proses pembayaran
      */
-    private function processPayment(array $headers, $paymentData)
+    private function processPayment(array $headers, $paymentData, $transaction)
     {
         // Log::info('Payment notification received', [
         //     'ref_no' => $paymentData['originalReferenceNo'],
@@ -441,14 +487,14 @@ class QRISNotificationController extends Controller
         //     'currency' => $paymentData['amount']['currency']
         // ]);
 
-        $transactionId = null;
-        $transaction = $this->qrisPayment->getTransactionByRefNo($paymentData['originalReferenceNo']);
-        if ($transaction != null) {
-            $transactionId = $transaction->id;
-        }
+        // $transactionId = null;
+        // $transaction = $this->qrisPayment->getTransactionByRefNo($paymentData['originalReferenceNo']);
+        // if ($transaction != null) {
+        //     $transactionId = $transaction->id;
+        // }
 
         $data = [
-            'qris_transaction_id' => $transactionId,
+            'qris_transaction_id' => $transaction->id,
             'original_reference_no' => $paymentData['originalReferenceNo'],
             'partner_reference_no' => $paymentData['originalPartnerReferenceNo'],
             'external_id' => $headers['x-external-id'],
