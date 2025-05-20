@@ -16,3 +16,6 @@ yarn-error.log
 /.fleet
 /.idea
 /.vscode
+.htaccess
+server.php
+.gitignore
