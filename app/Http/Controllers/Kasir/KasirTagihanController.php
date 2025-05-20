@@ -1,14 +1,15 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Kasir;
 
+use App\Http\Controllers\Controller;
+use App\Libraries\Medinfras\KasirService;
 use App\Models\MedinTagihanModel;
-use App\Services\MedinfrasService;
 use App\Traits\MessageResponseTrait;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
-class KasirRajalTagihanController extends Controller
+class KasirTagihanController extends Controller
 {
     use MessageResponseTrait;
 
@@ -91,7 +92,7 @@ class KasirRajalTagihanController extends Controller
         try {
             $data = $request->all();
 
-            $medin = new MedinfrasService; //MedinfrasWsClient
+            $medin = new KasirService; //MedinfrasWsClient
 
             $registrationNo = str_replace("/", "_", $data['registrationNo']);
 
@@ -126,7 +127,7 @@ class KasirRajalTagihanController extends Controller
                 'DetailList' => $detailList
             ];
 
-            $medin = new MedinfrasService;
+            $medin = new KasirService;
 
             $curl = json_decode($medin->post('billing/base/generate', $dataPost), true);
             Log::info('[' . $curl['Status'] . '][Kasir][Rajal][Tagihan][generatePaymentBill] ' . json_encode($curl));
@@ -149,7 +150,7 @@ class KasirRajalTagihanController extends Controller
         try {
             $data = $request->all();
 
-            $medin = new MedinfrasService; //MedinfrasWsClient
+            $medin = new KasirService; //MedinfrasWsClient
 
             $curl = json_decode($medin->get('registration/base/lockdown/validation/' . str_replace("/", "_", $data['registrationNo'])), true);
 

@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cek Data Pasien & Transaksi</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    {{-- <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script> --}}
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
     <!-- SweetAlert2 CSS -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
@@ -130,8 +131,19 @@
                 </div>
             </div>
         </div>
+
+        <!-- DIV untuk menampilkan status pembayaran -->
+        <div id="paymentStatusContainer" class="row justify-content-center mt-3 d-none">
+            <div class="col-md-10">
+                <div class="alert alert-success text-center" role="alert">
+                    <h4 class="alert-heading">Status Pembayaran</h4>
+                    <p id="paymentStatusMessage">Menunggu pembayaran...</p>
+                </div>
+            </div>
+        </div>
     </div>
 
+    {{-- @vite('resources/js/app.js') --}}
     <script>
         // Function to show toast notification
         function showToast(title, message, icon = 'success') {
@@ -151,6 +163,35 @@
                 icon: icon,
                 title: title,
                 text: message
+            });
+        }
+
+        // Function to show payment success alert with confetti effect
+        function showPaymentSuccessAlert(message) {
+            Swal.fire({
+                title: 'Pembayaran Berhasil!',
+                text: message,
+                icon: 'success',
+                confirmButtonText: 'OK',
+                allowOutsideClick: false,
+                showConfirmButton: true,
+                showClass: {
+                    popup: 'animate__animated animate__fadeInDown'
+                },
+                hideClass: {
+                    popup: 'animate__animated animate__fadeOutUp'
+                }
+            }).then((result) => {
+                // Update status display
+                const paymentStatusContainer = document.getElementById('paymentStatusContainer');
+                const paymentStatusMessage = document.getElementById('paymentStatusMessage');
+                paymentStatusContainer.classList.remove('d-none');
+                paymentStatusMessage.textContent = message;
+                document.querySelector('#paymentStatusContainer .alert').classList.add('alert-success');
+                document.querySelector('#paymentStatusContainer .alert').classList.remove('alert-warning');
+
+                // Optionally reload or reset form
+                // location.reload();
             });
         }
 
@@ -380,12 +421,33 @@
                         document.getElementById('qrCodeContainer').classList.remove('d-none');
                         document.getElementById('qrcode').innerHTML = '';
 
+                        //new QRCode(document.getElementById("qrcode"), {
+                        //    text: result.data.qrContent,
+                        //    width: 256,
+                        //    height: 256,
+                        //    correctLevel: QRCode.CorrectLevel.L,
+                        //    version: 10
+                        //});
+
                         var typeNumber = 0; // 0 untuk auto-detect ukuran
                         var errorCorrectionLevel = 'L';
                         var qr = qrcode(typeNumber, errorCorrectionLevel);
                         qr.addData(result.data.qrContent);
                         qr.make();
                         document.getElementById('qrcode').innerHTML = qr.createImgTag(4);
+
+                        // Show waiting for payment status
+                        const paymentStatusContainer = document.getElementById('paymentStatusContainer');
+                        const paymentStatusMessage = document.getElementById('paymentStatusMessage');
+                        paymentStatusContainer.classList.remove('d-none');
+                        paymentStatusMessage.textContent = 'Menunggu pembayaran...';
+                        document.querySelector('#paymentStatusContainer .alert').classList.remove(
+                            'alert-success');
+                        document.querySelector('#paymentStatusContainer .alert').classList.add('alert-warning');
+
+                        localStorage.setItem('referenceNo', result.data.referenceNo);
+                        // Subscribe ke channel baru
+                        subscribeToPaymentNotification(result.data.referenceNo);
 
                         // Show success toast
                         showToast('Berhasil', 'QR Code berhasil dibuat', 'success');
@@ -422,6 +484,8 @@
 
                     // Hide QR code if previously shown
                     document.getElementById('qrCodeContainer').classList.add('d-none');
+                    // Hide payment status container
+                    document.getElementById('paymentStatusContainer').classList.add('d-none');
                 }
             } catch (error) {
                 console.error('Error:', error);
@@ -442,8 +506,97 @@
             }
         });
     </script>
-
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        setTimeout(() => {
+            //console.log(`notification-channel.reference_no.${localStorage.getItem('referenceNo')}`);
+            if (typeof window.Echo !== 'undefined') {
+                console.log('echo is defined');
+
+                // Setup payment notification listener
+                const referenceNo = localStorage.getItem('referenceNo');
+                if (referenceNo) {
+                    window.Echo.channel(`notification-channel.reference_no.${referenceNo}`)
+                        .listen('QrisNotificationEvent', (e) => {
+                            console.log(e);
+                            // Show payment success alert when notification received
+                            if (e && e.message) {
+                                showPaymentSuccessAlert(e.message);
+                            }
+                        });
+
+                    console.log(
+                        `Mendengarkan event pada channel: notification-channel.reference_no.${referenceNo}`);
+                }
+            } else {
+                console.log('echo is not defined');
+            }
+        }, 200);
+
+        // Fungsi untuk mengelola subscription
+        function subscribeToPaymentNotification(referenceNo) {
+            if (!referenceNo) return; // Tidak subscribe jika tidak ada reference number
+
+            // Unsubscribe dari channel lama jika ada
+            if (window.currentQrisChannel) {
+                window.currentQrisChannel.unsubscribe();
+                console.log('Unsubscribe dari channel sebelumnya');
+            }
+
+            // Subscribe ke channel baru jika Echo tersedia
+            if (typeof window.Echo !== 'undefined') {
+                console.log(`Mendengarkan event pada channel: notification-channel.reference_no.${referenceNo}`);
+
+                window.currentQrisChannel = window.Echo.channel(`notification-channel.reference_no.${referenceNo}`)
+                    .listen('QrisNotificationEvent', (e) => {
+                        console.log('Notifikasi diterima:', e);
+                        // Show payment success alert when notification received
+                        if (e && e.message) {
+                            showPaymentSuccessAlert(e.message);
+                        }
+                    });
+
+                return true;
+            } else {
+                console.log('Echo tidak tersedia');
+                return false;
+            }
+        }
+
+        // Subscribe saat halaman dimuat jika ada reference number di localStorage
+        document.addEventListener('DOMContentLoaded', function() {
+            const savedReferenceNo = localStorage.getItem('referenceNo');
+            if (savedReferenceNo) {
+                console.log('Menemukan reference number yang tersimpan:', savedReferenceNo);
+
+                // Tunggu 500ms untuk memastikan Echo sudah diinisialisasi
+                setTimeout(() => {
+                    const subscribed = subscribeToPaymentNotification(savedReferenceNo);
+
+                    if (subscribed) {
+                        // Tampilkan status menunggu pembayaran jika berhasil subscribe
+                        const paymentStatusContainer = document.getElementById('paymentStatusContainer');
+                        const paymentStatusMessage = document.getElementById('paymentStatusMessage');
+                        if (paymentStatusContainer && paymentStatusMessage) {
+                            paymentStatusContainer.classList.remove('d-none');
+                            paymentStatusMessage.textContent = 'Menunggu pembayaran...';
+                            document.querySelector('#paymentStatusContainer .alert').classList.remove(
+                                'alert-success');
+                            document.querySelector('#paymentStatusContainer .alert').classList.add(
+                                'alert-warning');
+                        }
+                    }
+                }, 500);
+            }
+        });
+
+        // Clean up di saat unload
+        window.addEventListener('beforeunload', function() {
+            if (window.currentQrisChannel) {
+                window.currentQrisChannel.unsubscribe();
+            }
+        });
+    </script>
 </body>
 
 </html>

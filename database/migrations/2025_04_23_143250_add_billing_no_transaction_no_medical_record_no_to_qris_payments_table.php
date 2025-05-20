@@ -10,7 +10,7 @@ return new class extends Migration {
      */
     public function up(): void
     {
-        Schema::table('qris_transactions', function (Blueprint $table) {
+        Schema::table('qris_payments', function (Blueprint $table) {
             $table->string('medical_record_no')->nullable();
         });
     }
@@ -20,7 +20,7 @@ return new class extends Migration {
      */
     public function down(): void
     {
-        Schema::table('qris_transactions', function (Blueprint $table) {
+        Schema::table('qris_payments', function (Blueprint $table) {
             $table->dropColumn('medical_record_no');
         });
     }

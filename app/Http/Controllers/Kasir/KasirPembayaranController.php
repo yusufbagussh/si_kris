@@ -1,14 +1,15 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Kasir;
 
+use App\Http\Controllers\Controller;
+use App\Libraries\Medinfras\KasirService;
 use App\Models\MedinTagihanModel;
-use App\Services\MedinfrasService;
 use App\Traits\MessageResponseTrait;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
-class KasirRajalPembayaranController extends Controller
+class KasirPembayaranController extends Controller
 {
     use MessageResponseTrait;
 
@@ -65,7 +66,7 @@ class KasirRajalPembayaranController extends Controller
         try {
             $data = $request->all();
 
-            $medin = new MedinfrasService; //MedinfrasWsClient
+            $medin = new KasirService; //MedinfrasWsClient
 
             $registrationNo = str_replace("/", "_", $data['registrationNo']);
 
@@ -119,7 +120,7 @@ class KasirRajalPembayaranController extends Controller
                 ]
             ];
 
-            $medin = new MedinfrasService;
+            $medin = new KasirService;
 
             $curl = json_decode($medin->post('billing/base/create/payment', $dataPost), true);
             //$curl['Status'] = 'FAILED';$curl['Remarks'] = 'FAILED';$curl['Data']=[];

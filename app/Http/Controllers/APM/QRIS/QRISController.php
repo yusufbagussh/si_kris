@@ -1,14 +1,16 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\APM\QRIS;
 
+use App\Http\Controllers\Controller;
+use App\Libraries\BRI\QRISService;
 use App\Models\PatientPayment;
 use App\Models\PatientPaymentDetail;
 use App\Models\QrisBriToken;
 use App\Models\QrisPayment;
-use App\Services\QRISService;
 use App\Traits\MessageResponseTrait;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 
@@ -95,6 +97,8 @@ class QRISController extends Controller
         ], [
             'medical_record_no.required' => 'Nomor rekam medis harus diisi',
             'registration_no.required' => 'Nomor registrasi harus diisi',
+            'total_amount.required' => 'Total biaya harus diisi',
+            'total_amount.numeric' => 'Total biaya harus berupa angka',
             'billing_list.required' => 'Informasi billing harus diisi',
             'billing_list.*.billing_no.required' => 'Nomor billing harus diisi',
             'billing_list.*.billing_amount.required' => 'Biaya tagihan harus diisi',
@@ -193,6 +197,8 @@ class QRISController extends Controller
                 return $this->fail_msg_res($response['responseMessage']);
             }
 
+            DB::beginTransaction();
+
             // Save transaction to database
             $patientPayment = $this->patientPayment->create([
                 'medical_record_no' => $request->medical_record_no,
@@ -223,8 +229,11 @@ class QRISController extends Controller
                 $request->total_amount,
             );
 
+            DB::commit();
+
             return $this->ok_data_res($response);
         } catch (\Exception $e) {
+            DB::rollBack();
             Log::error('[' . $e->getCode() . '][generateQrPatient] ' . $e->getMessage());
             return $this->error_res(500);
         }
@@ -292,7 +301,8 @@ class QRISController extends Controller
         string $medicalRecordNo,
         string $registrationNo,
         float $amount,
-    ): void {
+    ): void
+    {
         $this->qrisPayment->create([
             'patient_payment_id' => $patientPaymentID,
             'registration_no' => $registrationNo,

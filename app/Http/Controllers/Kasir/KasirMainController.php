@@ -1,7 +1,8 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Kasir;
 
+use App\Http\Controllers\Controller;
 use App\Models\MedinTagihanModel;
 use App\Traits\MessageResponseTrait;
 use App\Traits\NavigationMenuTrait;
@@ -10,7 +11,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 
-class KasirRajalMainController extends Controller
+class KasirMainController extends Controller
 {
     use NavigationMenuTrait, MessageResponseTrait;
 

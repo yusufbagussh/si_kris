@@ -16,10 +16,15 @@ return [
             'client_secret' => env('BRI_CLIENT_SECRET'),
             'partner_id' => env('BRI_PARTNER_ID'),
             // 'public_key' => file_get_contents(storage_path('app/private/keys/public_key.pem')),
-            'public_key' => file_get_contents(storage_path('app/private/keys/bri/droensolo.Pub.pem')),
+            //'public_key' => file_get_contents(storage_path('app/private/keys/bri/droensolo.Pub.pem')),
+            'public_key' => file_get_contents(storage_path('app/private/keys/bri/private_key_droenSoloBaru.pub.pem')),
             'private_key' => file_get_contents(storage_path('app/private/keys/private_key.pem')),
             'description' => 'Deskripsi Client'
         ],
+        'webhook' => [
+            'url' => env('APM_WEBHOOK_URL'),
+            'secret' => env('APM_WEBHOOK_SECRET'),
+        ]
     ],
 
     /*
