@@ -1,0 +1,27 @@
+CONTACTLESS
+SUCCESS RESPONSE
+{
+    "acq_mid": "000001999115921",
+    "acq_tid": "10362515",
+    "action": "Settlement",
+    "batch_number": "000003",
+    "edc_address": "192.168.5.104",
+    "msg": "Settlement Success",
+    "pos_address": "172.0.0.1",
+    "status": "success",
+    "transaction_date": "2023-09-11 14:25:36"
+}
+
+ERROR
+- failed jika data tidak ada
+{
+    "acq_mid": "000001999115921",
+    "acq_tid": "10362515",
+    "action": "Settlement",
+    "batch_number": "N/A",
+    "edc_address": "192.168.88.158",
+    "msg": "Tidak ada data",
+    "pos_address": "172.0.0.1",
+    "status": "failed",
+    "transaction_date": "N/A"
+}

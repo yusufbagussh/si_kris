@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\APM\EDC\ECRLinkController;
 use App\Http\Controllers\APM\QRIS\QRISController;
 use App\Http\Controllers\APM\QRIS\QRISNotificationController;
 use App\Http\Controllers\Kasir\KasirCetakanController;
@@ -33,6 +34,17 @@ Route::post('/snap/v1.1/qr/qr-mpm-notify', [QRISNotificationController::class, '
 Route::post('/snap/generate/signature-token', [QRISController::class, 'getSignatureToken']);
 Route::post('/snap/generate/signature-notify', [QRISController::class, 'generateSignatureNotify']);
 
+Route::prefix('/apm/ecrlink')->group(function () {
+    Route::post('/sale', [ECRLinkController::class, 'sale'])->name('ecrlink.sale');
+    Route::post('/contactless', [ECRLinkController::class, 'contactless'])->name('ecrlink.contactless');
+    Route::post('/void', [ECRLinkController::class, 'void'])->name('ecrlink.void');
+    Route::post('/chech-status-qr', [ECRLinkController::class, 'chech-status-qr'])->name('ecrlink.chech-status-qr');
+    Route::post('/refund-qr', [ECRLinkController::class, 'refund-qr'])->name('ecrlink.refund-qr');
+    Route::post('/last-print', [ECRLinkController::class, 'last-print'])->name('ecrlink.last-print');
+    Route::post('/print-any', [ECRLinkController::class, 'print-any'])->name('ecrlink.print-any');
+    Route::post('/settlement', [ECRLinkController::class, 'settlement'])->name('ecrlink.settlement');
+});
+
 Route::group(['prefix' => 'medinfras'], function () {
     Route::group(['prefix' => 'outpatient'], function () {
         Route::post('clinic', [KasirMainController::class, 'klinikRawatJalan']);
@@ -50,38 +62,10 @@ Route::group(['prefix' => 'medinfras'], function () {
         Route::post('get-patient-bill', [KasirPembayaranController::class, 'getPatientBill']);
         Route::post('pay-bill', [KasirPembayaranController::class, 'doPaymentBill']);
 
-
         Route::post('list-patient-transaction', [KasirTagihanController::class, 'getListTransaksiByRegistrationNo']);
         Route::post('list-patient-bill', [KasirPembayaranController::class, 'getPatientBillByRegistrationNo']);
     });
 });
-
-// Main Route
-Route::get('/kasir/rawat-jalan', [KasirMainController::class, 'index'])->name('kasir.rajal.index');
-
-// Tagihan (Billing) Routes
-Route::prefix('ajax/kasir/rawat_jalan/tagihan')->group(function () {
-    Route::post('/pasien', [KasirTagihanController::class, 'listPatient'])->name('kasir.rajal.tagihan.pasien');
-    Route::post('/detail', [KasirTagihanController::class, 'detailPayment'])->name('kasir.rajal.tagihan.detail');
-    Route::post('/transaksi', [KasirTagihanController::class, 'listTagihanPasien'])->name('kasir.rajal.tagihan.transaksi');
-    Route::post('/kunci', [KasirTagihanController::class, 'lockTransaction'])->name('kasir.rajal.tagihan.kunci');
-    Route::post('/generate', [KasirTagihanController::class, 'generatePaymentBill'])->name('kasir.rajal.tagihan.generate');
-});
-
-// Pembayaran (Payment) Routes
-Route::prefix('ajax/kasir/rawat_jalan/pembayaran')->group(function () {
-    Route::post('/detail', [KasirPembayaranController::class, 'getPatientBill'])->name('kasir.rajal.pembayaran.detail');
-    Route::post('/bayar_tagihan', [KasirPembayaranController::class, 'doPaymentBill'])->name('kasir.rajal.pembayaran.bayar');
-});
-
-// Cetakan (Printing) Routes
-Route::prefix('ajax/kasir/rawat_jalan/cetakan')->group(function () {
-    Route::post('/transaksi_pembayaran', [KasirCetakanController::class, 'getTransactionPayment'])->name('kasir.rajal.cetakan.transaksi');
-    Route::post('/daftar_kwitansi', [KasirCetakanController::class, 'getListReceipt'])->name('kasir.rajal.cetakan.kwitansi');
-    Route::post('/cetak_kwitansi', [KasirCetakanController::class, 'printReceipt'])->name('kasir.rajal.cetakan.cetak');
-    Route::get('/cetak', [KasirCetakanController::class, 'printCetakanKwitansi'])->name('kasir.rajal.cetakan.print');
-});
-
 
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();

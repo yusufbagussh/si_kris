@@ -20,6 +20,11 @@ trait MessageResponseTrait
         return array('code' => 200, 'message' => 'OK', 'data' => $data);
     }
 
+    public function accept_msg_data_res($message, $data)
+    {
+        return array('code' => 202, 'status' => 'accepted', 'message' => $message, 'data' => $data);
+    }
+
     public function ok_msg_data_res($message, $data)
     {
         return array('code' => 200, 'message' => $message, 'data' => $data);

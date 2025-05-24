@@ -1,0 +1,189 @@
+SALE
+SUCCESS RESPONSE
+- Purchase - Sale
+{
+    "acq_mid": "000001999115921",
+    "acq_tid": "10362515",
+    "action": "Sale",
+    "amount": "2",
+    "approval": "007725",
+    "batch_number": "00003",
+    "card_category": "VISA BRI",
+    "card_name": "VISA",
+    "card_type": "CHIP",
+    "edc_address": "192.168.5.104",
+    "is_credit": "true",
+    "is_off_us": "false",
+    "method": "purchase",
+    "msg": "Proses Berhasil",
+    "pan": "4359 7202 **** 0107",
+    "pos_address": "172.0.0.1",
+    "rc": "00",
+    "reference_number": "000011000016",
+    "status": "success",
+    "trace_number": "000016",
+    "transaction_date": "2023-09-11 10:31:39",
+    "trx_id": "2djdsaa21ss23jsdawev9x"
+}
+
+- Brizzi - Pembayaran
+{
+    "acq_mid": "000001999115921",
+    "acq_tid": "10362515",
+    "action": "Sale",
+    "amount": "8",
+    "approval": "B6134ECE",
+    "batch_number": "00001",
+    "card_category": "N/A",
+    "card_name": "N/A",
+    "card_type": "Tap",
+    "edc_address": "192.168.5.104",
+    "is_credit": "N/A",
+    "is_off_us": "N/A",
+    "method": "brizzi",
+    "msg": "Transaction Success",
+    "pan": "N/A",
+    "pos_address": "172.0.0.1",
+    "rc": "00",
+    "reference_number": "000021",
+    "status": "success",
+    "trace_number": "21",
+    "transaction_date": "2023-09-11 10:50:13",
+    "trx_id": "4cjdsaa21ss23jsdawev9x"
+}
+
+- QRIS - Generate QR
+{
+    "acq_mid": "000001999115921",
+    "acq_tid": "10362515",
+    "action": "Sale",
+    "amount": "1",
+    "approval": "N/A",
+    "batch_number": "N/A",
+    "card_category": "N/A",
+    "card_name": "N/A",
+    "card_type": "SCAN",
+    "edc_address": "192.168.5.104",
+    "is_credit": "N/A",
+    "is_off_us": "N/A",
+    "method": "QRIS",
+    "msg": "transaksi berhasil",
+    "pan": "N/A",
+    "pos_address": "172.0.0.1",
+    "rc": "00",
+    "reference_number": "000005247574",
+    "reff_id": "2094971605",
+    "status": "paid",
+    "trace_number": "13",
+    "transaction_date": "2023-09-11 10:58:10",
+    "trx_id": "4cjdsaa21ss23jsdawev9C"
+}
+
+ERROR RESPONSE
+- failed (RC 50 - Pin Salah)
+{
+    "acq_mid": "000001999115921",
+    "acq_tid": "10362515",
+    "action": "Sale",
+    "amount": "8",
+    "approval": "N/A",
+    "batch_number": "00003",
+    "card_category": "VISA BRI",
+    "card_name": "VISA",
+    "card_type": "CHIP",
+    "edc_address": "192.168.5.104",
+    "is_credit": "true",
+    "is_off_us": "false",
+    "method": "purchase",
+    "msg": "Transaction Failed",
+    "pan": "4359 7202 **** 0107",
+    "pos_address": "172.0.0.1",
+    "rc": "-01 TC - 50 - Pin Salah (transactionErrorResult isResultEnd: true, code :0)",
+    "reference_number": "000011000019",
+    "status": "failed",
+    "trace_number": "000019",
+    "transaction_date": "2023-09-11 10:44:25",
+    "trx_id": "4cjdsaa21ss23jsdawev9x"
+}
+
+- failed (QR belum dibayar atau unpaid)
+{
+    "acq_mid": "000001999115921",
+    "acq_tid": "10362516",
+    "action": "Sale",
+    "amount": "3",
+    "approval": "N/A",
+    "batch_number": "N/A",
+    "card_category": "N/A",
+    "card_name": "N/A",
+    "card_type": "SCAN",
+    "edc_address": "192.168.5.214",
+    "is_credit": "N/A",
+    "is_off_us": "N/A",
+    "method": "QRIS",
+    "msg": "Transaksi Unpaid",
+    "pan": "N/A",
+    "pos_address": "172.0.0.1",
+    "rc": "N/A",
+    "reference_number": "000006558204",
+    "reff_id": "N/A",
+    "status": "unpaid",
+    "trace_number": "44",
+    "transaction_date": "2023-10-26 13:18:23",
+    "trx_id": "199sajba7831289qwwb"
+}
+
+- Transaction Batal
+{
+    "acq_mid": "000001999115921",
+    "acq_tid": "10362515",
+    15
+    ECRLink PCS
+    "action": "Sale",
+    "amount": "N/A",
+    "approval": "N/A",
+    "batch_number": "N/A",
+    "card_category": "N/A",
+    "card_name": "N/A",
+    "card_type": "N/A",
+    "edc_address": "192.168.5.104",
+    "is_credit": "N/A",
+    "is_off_us": "N/A",
+    "method": "N/A",
+    "msg": "Transaction Failed",
+    "pan": "N/A",
+    "pos_address": "172.0.0.1",
+    "rc": "N/A",
+    "reference_number": "N/A",
+    "status": "failed",
+    "trace_number": "N/A",
+    "transaction_date": "N/A",
+    "trx_id": "4cjdsaa21ss23jsdawev9x"
+}
+
+- Transaction dilakukan dengan trx_id yang sama
+    {
+    "acq_mid": "000001999115921",
+    "acq_tid": "10362515",
+    "action": "Sale",
+    "amount": "8",
+    "approval": "B6134ECE",
+    "batch_number": "00001",
+    "card_category": "N/A",
+    "card_name": "N/A",
+    "card_type": "Tap",
+    "edc_address": "192.168.5.104",
+    "is_credit": "N/A",
+    "is_off_us": "N/A",
+    "method": "brizzi",
+    "msg": "Transaksi telah berhasil dilakukan
+    dengan trxID ini",
+    "pan": "N/A",
+    "pos_address": "172.0.0.1",
+    "rc": "00",
+    "reference_number": "000021",
+    "status": "success",
+    "trace_number": "21",
+    "transaction_date": "2023-09-11 10:50:13",
+    "trx_id": "4cjdsaa21ss23jsdawev9x"
+}

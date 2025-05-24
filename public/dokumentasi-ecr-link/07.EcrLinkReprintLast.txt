@@ -1,0 +1,52 @@
+CONTACTLESS
+SUCCESS RESPONSE
+{
+    "acq_mid": "000001999115921",
+    "acq_tid": "10362517",
+    "action": "Reprint Last",
+    "amount": "1",
+    "approval": "787352",
+    "batch_number": "00001",
+    "card_category": "DEBIT BANK LAIN",
+    "card_name": "NSICCS",
+    "card_type": "CHIP",
+    "edc_address": "172.20.10.2",
+    "is_credit": "false",
+    "is_off_us": "N/A",
+    "method": "purchase",
+    "msg": "Transaction Found",
+    "pan": "4889 5030 **** 8049",
+    "pos_address": "172.0.0.1",
+    "rc": "00",
+    "reference_number": "000047000015",
+    "status": "success",
+    "trace_number": "000015",
+    "transaction_date": "2023-11-07 05:12:59"
+}
+
+- failed jika data tidak ada
+{
+"acq_mid": "000001999115921",
+"acq_tid": "10362515",
+"action": "Reprint Last",
+"amount": "N/A",
+Respond Sample
+"approval": "N/A",
+(Error)
+"batch_number": "N/A",
+"card_category": "N/A",
+"card_name": "N/A",
+"card_type": "N/A",
+"edc_address": "192.168.5.104",
+"is_credit": "N/A",
+"is_off_us": "N/A",
+"method": "N/A",
+"msg": "No Transaction Found",
+"pan": "N/A",
+"pos_address": "172.0.0.1",
+"rc": "N/A",
+"reference_number": "N/A",
+"status": "failed",
+"trace_number": "N/A",
+"transaction_date": "N/A"
+}

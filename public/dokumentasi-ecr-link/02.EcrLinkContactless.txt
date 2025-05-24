@@ -1,0 +1,109 @@
+CONTACTLESS
+SUCCESS RESPONSE
+- Purchase - Contactless
+{
+    "acq_mid": "000001999115921",
+    "acq_tid": "10362515",
+    "action": "Contactless",
+    "amount": "5",
+    "approval": "007868",
+    "batch_number": "00003",
+    "card_category": "VISA BRI",
+    "card_name": "VISA",
+    "card_type": "TAP",
+    "edc_address": "192.168.5.104",
+    "is_credit": "true",
+    "is_off_us": "false",
+    "method": "purchase",
+    "msg": "Transaction Success",
+    "pan": "4359 7202 **** 0107",
+    "pos_address": "172.0.0.1",
+    "rc": "00",
+    "reference_number": "000011000017",
+    "status": "success",
+    "trace_number": "000017",
+    "transaction_date": "2023-09-11 10:34:57",
+    "trx_id": "9djdsaa21ss23jsdawev9x"
+}
+
+ERROR RESPONSE
+- failed (Time Out)
+{
+    "acq_mid": "000001999115921",
+    "acq_tid": "10362516",
+    "action": "Contactless",
+    "amount": "N/A",
+    "approval": "N/A",
+    "batch_number": "N/A",
+    "card_category": "N/A",
+    "card_name": "N/A",
+    "card_type": "N/A",
+    "edc_address": "192.168.5.104",
+    "is_credit": "true",
+    "is_off_us": "N/A",
+    "method": "purchase",
+    "msg": "Transaction Failed",
+    "pan": "N/A",
+    "pos_address": "172.0.0.1",
+    "rc": "-01 TC - Timeout (Timeout (-30005))",
+    "reference_number": "N/A",
+    "status": "failed",
+    "trace_number": "000040",
+    "transaction_date": "2023-09-18 17:08:21",
+    "trx_id": "5djdsaa21ss23jsdawev10"
+}
+
+Transaction Batal
+{
+    "acq_mid": "000001999115921",
+    "acq_tid": "10362516",
+    "action": "Sale",
+    "amount": "N/A",
+    "approval": "N/A",
+    Respond Sample
+    "batch_number": "N/A",
+    "card_category": "N/A",
+    "card_name": "N/A",
+    "card_type": "N/A",
+    "edc_address": "172.20.10.2",
+    "is_credit": "N/A",
+    "is_off_us": "N/A",
+    "method": "purchase",
+    "msg": "Transaction Failed",
+    "pan": "N/A",
+    "pos_address": "172.0.0.1",
+    "rc": "-01 TC - Transaksi dibatalkan
+    (onBackPressed)",
+    "reference_number": "N/A",
+    "status": "failed",
+    "trace_number": "000033",
+    "transaction_date": "2023-11-06 17:19:11",
+    "trx_id": "123098"
+}
+
+Transaction dilakukan dengan trx_id yang sama
+{
+    "acq_mid": "000001999115921",
+    "acq_tid": "10362517",
+    "action": "Contactless",
+    "amount": "5",
+    "approval": "005878",
+    "batch_number": "00001",
+    "card_category": "VISA BRI",
+    "card_name": "VISA",
+    "card_type": "TAP",
+    "edc_address": "172.20.10.2",
+    "is_credit": "N/A",
+    "is_off_us": "N/A",
+    "method": "purchase",
+    "msg": "Transaksi telah berhasil dilakukan
+    dengan trxID ini",
+    "pan": "4359 7202 **** 4505",
+    "pos_address": "172.0.0.1",
+    "rc": "00",
+    "reference_number": "000011000014",
+    "status": "success",
+    "trace_number": "000014",
+    "transaction_date": "2023-11-07 05:09:17",
+    "trx_id": "9djdsaa21ss23jsdawev9x"
+}

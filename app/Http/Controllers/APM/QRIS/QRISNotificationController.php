@@ -17,7 +17,6 @@ class QRISNotificationController extends Controller
 {
     private $briClientKey;
     private $briClientSecret;
-    //private $briPublicKeyPath;
     private $briPartnerId;
     private $briPublicKey;
     private $apmWebhookUrl;
@@ -130,11 +129,6 @@ class QRISNotificationController extends Controller
     private function saveToken($token, $clientKey, $expiresIn)
     {
         $expiration = now()->addSeconds($expiresIn);
-        //Cache::put("qris_token_{$token}", [
-        //    'client_key' => $clientKey,
-        //    'expires_at' => $expiration
-        //], $expiration);
-
         QrisToken::create([
             'token' => $token,
             'client_key' => $clientKey,
@@ -272,7 +266,7 @@ class QRISNotificationController extends Controller
                 return response()->json($response, 400);
             }
 
-            $transaction = QrisPayment::where('partner_reference_no', $request->originalPartnerReferenceNo)->first();
+            $transaction = $this->qrisPayment->where('partner_reference_no', $request->originalPartnerReferenceNo)->first();
 
             if ($transaction == null) {
                 $response = [
@@ -298,10 +292,10 @@ class QRISNotificationController extends Controller
 
             $this->processPayment($headers, $request->all(), $transaction);
 
+            // Jika status transaksi adalah sukses, kirimkan notifikasi ke webhook Internal
             if ($request->transactionStatusDesc == 'success') {
                 $transaction->load(['patientPayment.patientPaymentDetail']);
 
-                // Kirim event notifikasi ke sistem lain
                 $data = [
                     "registrationNo" => $transaction->patientPayment->registration_no,
                     "remarks" => "Pembayaran melalui {$request->input('AdditionalInfo.issuerName')} oleh {$request->destinationAccountName}",
@@ -337,8 +331,6 @@ class QRISNotificationController extends Controller
                 ]);
             }
 
-            //event(new QrisNotificationEvent($request->originalReferenceNo));
-
             $response = [
                 'responseCode' => '2005200',
                 'responseMessage' => 'Successfull',
@@ -367,15 +359,7 @@ class QRISNotificationController extends Controller
      */
     private function validateToken($token)
     {
-        // Pilihan 1: Validasi menggunakan cache
-        // $tokenData = Cache::get("qris_token_{$token}");
-        // if ($tokenData) {
-        //     return true;
-        // }
-
-        // Pilihan 2: Validasi menggunakan database
         $tokenRecord = $this->qrisToken->checkExpiredToken($token);
-
         return $tokenRecord !== null;
     }
 
@@ -405,9 +389,6 @@ class QRISNotificationController extends Controller
             $hashedBody = bin2hex(strtolower(hash('sha256', $requestBody)));
             $stringToSign = "$method:$endpoint:$token:$hashedBody:$timestamp";
 
-            Log::info("StringToSign (Verification): " . $stringToSign);
-            Log::info("KEY HMAC: " . $this->briClientSecret);
-
             // Buat signature lokal untuk dibandingkan
             $expectedSignature = base64_encode(hash_hmac('sha512', $stringToSign, $this->briClientSecret, true));
 
@@ -421,78 +402,12 @@ class QRISNotificationController extends Controller
             return false;
         }
     }
-    // private function verifyNotificationSignature(Request $request)
-    // {
-    //     try {
-    //         $partnerId = $request->header('X-PARTNER-ID');
-    //         $timestamp = $request->header('X-TIMESTAMP');
-    //         $signature = $request->header('X-SIGNATURE');
-    //         $token = Str::substr($request->header('Authorization'), 7);
-
-    //         // Dapatkan partner berdasarkan partner ID
-    //         // $partners = config('qris.partners');
-    //         // if (!isset($partners[$partnerId])) {
-    //         if ($this->briPartnerId != $partnerId) {
-    //             Log::error("Unknown partner ID: $partnerId");
-    //             return false;
-    //         }
-
-    //         // $partnerInfo = $partners[$partnerId];
-
-    //         // Buat string to sign sesuai dokumentasi
-    //         $method = 'POST';
-    //         $endpoint = '/snap/v1.1/qr/qr-mpm-notify';
-
-    //         // Hash request body
-    //         $requestBody = json_encode($request->all());
-    //         $bodyHash = strtolower(hash('sha256', $requestBody));
-
-    //         // String to sign
-    //         $stringToSign = "$method:$endpoint:$token:$bodyHash:$timestamp";
-
-    //         // Verifikasi signature
-    //         // $publicKey = openssl_pkey_get_public($partnerInfo['public_key']);
-    //         $briPublicKeyContent = file_get_contents($this->briPublicKeyPath);
-    //         $publicKey = openssl_pkey_get_public($briPublicKeyContent);
-    //         if (!$publicKey) {
-    //             Log::error("Failed to get public key for partner: $partnerId");
-    //             return false;
-    //         }
-
-    //         $isVerified = openssl_verify(
-    //             $stringToSign,
-    //             base64_decode($signature),
-    //             // $this->briClientSecret,
-    //             $publicKey,
-    //             OPENSSL_ALGO_SHA256
-    //         );
-
-    //         return $isVerified === 1;
-    //     } catch (\Exception $e) {
-    //         Log::error('Error in signature verification: ' . $e->getMessage());
-    //         return false;
-    //     }
-    // }
 
     /**
      * Proses pembayaran
      */
     private function processPayment(array $headers, $paymentData, $transaction)
     {
-        // Log::info('Payment notification received', [
-        //     'ref_no' => $paymentData['originalReferenceNo'],
-        //     'partner_ref_no' => $paymentData['originalPartnerReferenceNo'],
-        //     'status' => $paymentData['latestTransactionStatus'] ?? 'Not provided',
-        //     'amount' => $paymentData['amount']['value'],
-        //     'currency' => $paymentData['amount']['currency']
-        // ]);
-
-        // $transactionId = null;
-        // $transaction = $this->qrisPayment->getTransactionByRefNo($paymentData['originalReferenceNo']);
-        // if ($transaction != null) {
-        //     $transactionId = $transaction->id;
-        // }
-
         $data = [
             'qris_transaction_id' => $transaction->id,
             'original_reference_no' => $paymentData['originalReferenceNo'],
@@ -517,8 +432,6 @@ class QRISNotificationController extends Controller
         // Simpan data pembayaran ke database
         QrisNotification::create($data);
 
-        // Di sini Anda bisa tambahkan logika bisnis lainnya
-        // Misalnya: memperbarui status pesanan, mengirim notifikasi, dll.
         $statusMap = [
             '00' => 'SUCCESS',
             '01' => 'INITIATED',
