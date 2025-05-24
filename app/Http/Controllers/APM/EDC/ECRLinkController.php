@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\APM\EDC;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\SaleTransactionRequest;
 use App\Jobs\APM\EDC\SendEcrLinkJob;
 use App\Libraries\BRI\ECRLinkService;
 use App\Models\EdcPayment;
@@ -250,10 +249,10 @@ class ECRLinkController extends Controller
      * Contactless hanya dapat digunakan untuk metode Pembayaran Purchase.
      * Contactless dapat digunakan untuk pembayaran metode Tap menggunakan kartu Visa dan Mastercard.
      *
-     * @param SaleTransactionRequest $request
+     * @param Request $request
      * @return array
      */
-    public function void(SaleTransactionRequest $request)
+    public function void(Request $request)
     {
         try {
             // Get validated data from request
@@ -286,7 +285,7 @@ class ECRLinkController extends Controller
         }
     }
 
-    public function checkStatusQR(SaleTransactionRequest $request)
+    public function checkStatusQR(Request $request)
     {
         try {
             // Get validated data from request
@@ -320,7 +319,7 @@ class ECRLinkController extends Controller
         }
     }
 
-    public function refundQR(SaleTransactionRequest $request)
+    public function refundQR(Request $request)
     {
         try {
             // Get validated data from request
