@@ -151,9 +151,8 @@ class ECRLinkController extends Controller
      * Contactless hanya dapat digunakan untuk metode Pembayaran Purchase.
      * Contactless dapat digunakan untuk pembayaran metode Tap menggunakan kartu Visa dan Mastercard.
      *
-     * @param SaleTransactionRequest $request
      */
-    public function contactless(SaleTransactionRequest $request)
+    public function contactless(Request $request)
     {
         $validator = Validator::make($request->all(), [
             'medical_record_no' => 'required|string',
