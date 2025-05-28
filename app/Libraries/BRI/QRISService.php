@@ -94,10 +94,9 @@ class QRISService
         ]);
 
         $response = Http::withHeaders($headers)->post($this->baseUrl . $endpoint, $body);
-        //Log::info("INFO RESPONSE GEN-QR QRIS BRIS");
-        //Log::info("response : " . $response);
+
         if (!$response->successful()) {
-            Log::error('Failed to query payment', [
+            Log::error('Failed to generate QR', [
                 'response' => $response->json(),
                 'status' => $response->status()
             ]);
