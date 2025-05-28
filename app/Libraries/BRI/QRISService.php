@@ -74,7 +74,7 @@ class QRISService
     {
         $partnerReferenceNo = $this->generatePartnerReferenceNoFromReg($registrationNo);
         $timestamp = $this->timeStamp;
-        $endpoint = "/snap/v1.1/qr/qr-mpm-generate-qr";
+        $endpoint = "/snap/v1.1/qr/qr-mpm-generate";
 
         $formattedAmount = number_format($totalAmount, 2, '.', '');
         $body = [
@@ -219,7 +219,8 @@ class QRISService
     {
         $hashedBody = strtolower(hash("sha256", json_encode($body)));
         $stringToSign = "$method:$endpoint:$token:$hashedBody:$timestamp";
-        $signature = base64_encode(hash_hmac('sha512', $stringToSign, $this->clientSecret, true));
+        $hmacString = hash_hmac('sha512', $stringToSign, $this->clientSecret, true);
+        $signature = base64_encode($hmacString);
         return $signature;
     }
 
