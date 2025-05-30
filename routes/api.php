@@ -29,9 +29,9 @@ Route::post('/snap/list/payment-info', [QRISController::class, 'getListInfoPatie
 Route::post('/snap/v1.0/access-token/b2b', [QRISNotificationController::class, 'generateToken']);
 Route::post('/snap/v1.1/qr/qr-mpm-notify', [QRISNotificationController::class, 'paymentNotification']);
 
-//Generate Token & Signature
-Route::post('/snap/generate/signature-token', [QRISController::class, 'getSignatureToken']);
-Route::post('/snap/generate/signature-notify', [QRISController::class, 'generateSignatureNotify']);
+//Generate Token & Signature For Notification
+Route::post('/snap/generate/signature-token', [QRISNotificationController::class, 'generateSignatureToken']);
+Route::post('/snap/generate/signature-notify', [QRISNotificationController::class, 'generateSignatureNotify']);
 
 Route::prefix('apm')->group(function () {
     Route::prefix('qris')->group(function () {

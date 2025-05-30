@@ -2,10 +2,10 @@
 
 namespace App\Jobs\APM\EDC;
 
-use App\Libraries\BRI\EDCService;
 use App\Models\EdcPayment;
 use App\Models\PatientPayment;
 use App\Models\PatientPaymentDetail;
+use App\Services\BRI\EDCService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;

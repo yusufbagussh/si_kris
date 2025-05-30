@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Libraries\BRI;
+namespace App\Services\BRI;
 
 use App\Models\QrisBriToken;
 use App\Models\QrisInquiry;
@@ -17,10 +17,6 @@ class QRISService
     private $baseUrl;
     private $clientId;
     private $clientSecret;
-    private $clientIdBri;
-    private $channelIdBri;
-    private $clientSecretBri;
-    private $partnerIdBri;
     private $partnerId;
     private $channelId;
     private $externalId;
@@ -34,23 +30,17 @@ class QRISService
 
     public function __construct()
     {
-        $this->clientIdBri = env('BRI_CLIENT_ID');
-        $this->clientSecretBri = env('BRI_CLIENT_SECRET');
-        $this->partnerIdBri = env('BRI_PARTNER_ID');
-        $this->channelIdBri = env('BRI_CHANNEL_ID');
-        $this->baseUrl = env('QRIS_BASE_URL');
-        $this->clientId = env('QRIS_CLIENT_ID');
-        $this->clientSecret = env('QRIS_CLIENT_SECRET');
-        $this->partnerId = env('QRIS_PARTNER_ID');
-        $this->channelId = env('QRIS_CHANNEL_ID'); //env('QRIS_CHANNEL_ID'); // Channel ID untuk QRIS
-        $this->externalId = $this->generateExternalId(); //env('QRIS_EXTERNAL_ID'); // External ID untuk QRIS
-        $this->terminalId = env('QRIS_TERMINAL_ID');
-        $this->merchantId = env('QRIS_MERCHANT_ID');
-        $this->privateKeyPath = storage_path('app/private/keys/private_key.pem'); // Simpan private key di storage/keys
-        $this->publicKeyPath = storage_path('app/private/keys/public_key.pem');; // Simpan private key di storage/keys
+        $this->baseUrl = config('qris.partners.bri.base_url');
+        $this->clientId = config('qris.partners.bri.client_id');
+        $this->clientSecret = config('qris.partners.bri.client_secret');
+        $this->partnerId = config('qris.partners.bri.partner_id');
+        $this->channelId = config('qris.partners.bri.channel_id');
+        $this->terminalId = config('qris.partners.bri.terminal_id');
+        $this->merchantId = config('qris.partners.bri.merchant_id');
+        $this->privateKeyPath = storage_path('app/private/keys/private_key.pem');
+        $this->publicKeyPath = storage_path('app/private/keys/public_key.pem');;
         $this->timeStamp = now()->toIso8601String();
-        // $this->timeStamp = now()->format('Y-m-d\TH:i:s.vP');
-
+        $this->externalId = $this->generateExternalId();
         $this->qrisBriToken = new QrisBriToken();
     }
 
@@ -154,7 +144,6 @@ class QRISService
         $registrationNo = $exploadRegistrationNo[1] . $exploadRegistrationNo[2] . $randomSuffix;
         return $registrationNo;
     }
-
 
     private function generateExternalId()
     {
@@ -286,61 +275,5 @@ class QRISService
 
         openssl_verify($stringToSign, $signature, $keyResource, OPENSSL_ALGO_SHA256);
         return base64_encode($signature);
-    }
-
-    public function generateSignatureNotify($request)
-    {
-        $authHeader = $request->header('Authorization');
-        $token = Str::substr($authHeader, 7);
-        $timestamp = $this->timeStamp;
-        $endpoint = "/api/snap/v1.1/qr/qr-mpm-notify";
-        $body = $request->all();
-
-
-        //$hashedBody = strtolower(hash("sha256", json_encode($body)));
-        $hashedBody = bin2hex(strtolower(hash('sha256', json_encode($body))));
-
-        $stringToSign = "POST:$endpoint:$token:$hashedBody:$timestamp";
-        //$stringToSign2 = "POST:/api/snap/v1.1/qr/qr-mpm-notify:WElcNRChF8zyCxDaaiWTooqWrENNWMhI:$hashedBody2:2025-05-05T10:33:38+07:00";
-
-        Log::info("StringToSign: " . $stringToSign);
-        Log::info("KEY HMAC: " . $this->clientSecretBri);
-        // $signature = hash_hmac('sha512', $stringToSign, $this->$this->clientSecretBri);
-        $signature = base64_encode(hash_hmac('sha512', $stringToSign, $this->clientSecretBri, true));
-        //$signature2 = base64_encode(hash_hmac('sha512', $stringToSign2, $this->clientSecretBri, true));
-        Log::info("Generated Signature: " . $signature);
-
-        // $decodedHash = hex2bin('66656131363339303731356462323364663762346439376634643563386632333939336331336435393066326635363061663861386362646238366663313534');
-
-        $headers = [
-            'Authorization' => "Bearer $token",
-            'Content-Type' => 'application/json',
-            'X-TIMESTAMP' => $timestamp,
-            'X-PARTNER-ID' => $this->partnerIdBri,
-            'CHANNEL-ID' => $this->channelIdBri,
-            'X-EXTERNAL-ID' => $this->externalId,
-            'X-SIGNATURE' => $signature,
-            //'X-SIGNATURE-2' => $signature2,
-            //'HASHED' => $hashedBody,
-            //'HASHEDV2' => $hashedBody2,
-        ];
-
-        return [
-            'headers' => $headers,
-            'body' => $body,
-        ];
-    }
-
-    public function generateSignatureAccessToken()
-    {
-        $timestamp = $this->timeStamp;
-        $stringToSign = $this->clientIdBri . "|" . $timestamp;
-        $signature = $this->generateRSASignature($stringToSign);
-        return [
-            'Content-Type' => 'application/json',
-            'X-CLIENT-KEY' => $this->clientIdBri,
-            'X-TIMESTAMP' => $timestamp,
-            'X-SIGNATURE' => $signature,
-        ];
     }
 }

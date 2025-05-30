@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Libraries\Medinfras;
+namespace App\Services\Medinfras;
 
 use Carbon\Carbon;
 use GuzzleHttp\Client;

@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Kasir;
 
 use App\Http\Controllers\Controller;
-use App\Libraries\Medinfras\KasirService;
 use App\Models\MedinTagihanModel;
+use App\Services\Medinfras\KasirService;
 use App\Traits\MessageResponseTrait;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -13,9 +13,13 @@ class KasirPembayaranController extends Controller
 {
     use MessageResponseTrait;
 
-    public function __construct() {}
+    public function __construct()
+    {
+    }
 
-    public function index() {}
+    public function index()
+    {
+    }
 
     // Penarikan data tagihan pasien yang telah terbentuk untuk di bayar
     public function getPatientBill(Request $request)

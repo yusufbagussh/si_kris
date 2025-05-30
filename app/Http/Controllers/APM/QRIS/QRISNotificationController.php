@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\QrisNotification;
 use App\Models\QrisPayment;
 use App\Models\QrisToken;
+use App\Services\BRI\QRISNotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -25,19 +26,22 @@ class QRISNotificationController extends Controller
     private QrisPayment $qrisPayment;
     private QrisToken $qrisToken;
 
+    private $qrisNotificationService;
+
     public function __construct()
     {
-        //$this->briPublicKeyPath = storage_path('app/public/keys/public_key.pem');
-        $this->briPartnerId = config('qris.clients.bri.partner_id');
-        $this->briClientKey = config('qris.clients.bri.client_id');
-        $this->briClientSecret = config('qris.clients.bri.client_secret');
-        $this->briPublicKey = config('qris.clients.bri.public_key');
+        $this->briPartnerId = config('qris.partners.bri.webhook.partner_id');
+        $this->briClientKey = config('qris.partners.bri.webhook.client_id');
+        $this->briClientSecret = config('qris.partners.bri.webhook.client_secret');
+        $this->briPublicKey = config('qris.partners.bri.webhook.public_key');
 
-        $this->apmWebhookUrl = config('qris.clients.webhook.url');
-        $this->apmWebhookSecret = config('qris.clients.webhook.secret');
+        $this->apmWebhookUrl = config('qris.soba.webhook.url');
+        $this->apmWebhookSecret = config('qris.soba.webhook.secret');
 
         $this->qrisPayment = new QrisPayment();
         $this->qrisToken = new QrisToken();
+
+        $this->qrisNotificationService = new QRISNotificationService();
     }
 
     /**
@@ -450,5 +454,19 @@ class QRISNotificationController extends Controller
             $transaction->paid_at = now();
         }
         $transaction->save();
+    }
+
+    public function generateSignatureToken()
+    {
+        return response()->json($this->qrisNotificationService->generateSignatureAccessToken());
+    }
+
+    public function generateSignatureNotify(Request $request)
+    {
+        return response()->json(
+            $this->qrisNotificationService->generateSignatureNotify(
+                $request
+            )
+        );
     }
 }

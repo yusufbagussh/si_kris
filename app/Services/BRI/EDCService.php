@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Libraries\BRI;
+namespace App\Services\BRI;
 
 use App\Traits\MessageResponseTrait;
 use Exception;

@@ -4,10 +4,10 @@ namespace App\Http\Controllers\APM\EDC;
 
 use App\Http\Controllers\Controller;
 use App\Jobs\APM\EDC\EDCJob;
-use App\Libraries\BRI\EDCService;
 use App\Models\EdcPayment;
 use App\Models\PatientPayment;
 use App\Models\PatientPaymentDetail;
+use App\Services\BRI\EDCService;
 use App\Traits\MessageResponseTrait;
 use Exception;
 use Illuminate\Http\Request;
