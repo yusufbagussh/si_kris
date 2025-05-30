@@ -1,11 +1,7 @@
 <?php
 
-use App\Http\Controllers\APM\EDC\ECRLinkController;
+use App\Http\Controllers\APM\EDC\EDCController;
 use App\Http\Controllers\APM\QRIS\QRISController;
-use App\Http\Controllers\Kasir\KasirCetakanController;
-use App\Http\Controllers\Kasir\KasirMainController;
-use App\Http\Controllers\Kasir\KasirPembayaranController;
-use App\Http\Controllers\Kasir\KasirTagihanController;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 
@@ -37,14 +33,14 @@ Route::get('/inquiry', function () {
 });
 
 Route::prefix('/apm/ecrlink')->group(function () {
-    Route::post('/sale', [ECRLinkController::class, 'sale'])->name('ecrlink.sale');
-    Route::post('/contactless', [ECRLinkController::class, 'contactless'])->name('ecrlink.contactless');
-    Route::post('/void', [ECRLinkController::class, 'void'])->name('ecrlink.void');
-    Route::post('/chech-status-qr', [ECRLinkController::class, 'chech-status-qr'])->name('ecrlink.chech-status-qr');
-    Route::post('/refund-qr', [ECRLinkController::class, 'refund-qr'])->name('ecrlink.refund-qr');
-    Route::post('/last-print', [ECRLinkController::class, 'last-print'])->name('ecrlink.last-print');
-    Route::post('/print-any', [ECRLinkController::class, 'print-any'])->name('ecrlink.print-any');
-    Route::post('/settlement', [ECRLinkController::class, 'settlement'])->name('ecrlink.settlement');
+    Route::post('/sale', [EDCController::class, 'sale'])->name('ecrlink.sale');
+    Route::post('/contactless', [EDCController::class, 'contactless'])->name('ecrlink.contactless');
+    Route::post('/void', [EDCController::class, 'void'])->name('ecrlink.void');
+    Route::post('/chech-status-qr', [EDCController::class, 'chech-status-qr'])->name('ecrlink.chech-status-qr');
+    Route::post('/refund-qr', [EDCController::class, 'refund-qr'])->name('ecrlink.refund-qr');
+    Route::post('/last-print', [EDCController::class, 'last-print'])->name('ecrlink.last-print');
+    Route::post('/print-any', [EDCController::class, 'print-any'])->name('ecrlink.print-any');
+    Route::post('/settlement', [EDCController::class, 'settlement'])->name('ecrlink.settlement');
 });
 
 Route::post('/snap/qris/generate-qr', [QRISController::class, 'generateQrPatient'])->name('qris.generate-qr');
@@ -70,7 +66,7 @@ Route::get('/test-medinfras', function () {
     }
 });
 
-Route::post('/contactless', [ECRLinkController::class, 'contactless']);
+Route::post('/contactless', [EDCController::class, 'contactless']);
 
 Route::get('form', function () {
     return view('form');
@@ -82,16 +78,16 @@ Route::get('reverb', function () {
     return view('reverb');
 });
 
-Route::get('public', function () {
-    event(new \App\Events\PublicEvent('hello from Web.php'));
-    return 'done';
-});
+// Route::get('public', function () {
+//     event(new \App\Events\PublicEvent('hello from Web.php'));
+//     return 'done';
+// });
 
-Route::get('test', function () {
-    event(new \App\Events\PublicEvent('792632950548'));
-    event(new \App\Events\QrisNotificationEvent('792632950548'));
-    return 'done';
-});
+// Route::get('test', function () {
+//     event(new \App\Events\PublicEvent('792632950548'));
+//     event(new \App\Events\QrisNotificationEvent('792632950548'));
+//     return 'done';
+// });
 
 //Route::get('private', function () {
 //    event(new PrivateEvent('hello from Web.php by Admin', 1));

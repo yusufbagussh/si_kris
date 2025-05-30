@@ -141,9 +141,10 @@ class EDCService
      */
     private function sendRequest(array $data): array
     {
+        $endPoint = $this->posAddress == 'localhost' ? '/app/qwerty' : '';
         $encryptedData = $this->encryptData(json_encode($data));
         $protocol = $this->isSecure ? 'wss' : 'ws';
-        $uri = "$protocol://{$this->edcAddress}:{$this->port}/app/qwerty";
+        $uri = "$protocol://{$this->edcAddress}:{$this->port}{$endPoint}";
 
         Log::info('Connecting to ECRLink synchronously', [
             'uri' => $uri,
