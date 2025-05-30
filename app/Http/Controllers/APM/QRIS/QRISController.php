@@ -3,12 +3,12 @@
 namespace App\Http\Controllers\APM\QRIS;
 
 use App\Http\Controllers\Controller;
-use App\Libraries\BRI\QRISService;
 use App\Models\PatientPayment;
 use App\Models\PatientPaymentDetail;
 use App\Models\QrisBriToken;
 use App\Models\QrisInquiry;
 use App\Models\QrisPayment;
+use App\Services\BRI\QRISService;
 use App\Traits\MessageResponseTrait;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -279,7 +279,8 @@ class QRISController extends Controller
         string $medicalRecordNo,
         string $registrationNo,
         float $amount,
-    ): void {
+    ): void
+    {
         $this->qrisPayment->create([
             'patient_payment_id' => $patientPaymentID,
             'registration_no' => $registrationNo,
@@ -341,19 +342,5 @@ class QRISController extends Controller
             'issuer_rrn' => $response['additionalInfo']['issuerRrn'] ?? null,
             'mpan' => $response['additionalInfo']['mpan'] ?? null,
         ]);
-    }
-
-    //Helper Function to Generate Signature Token And Notify
-    public function generateSignatureToken()
-    {
-        return response()->json($this->qrisService->generateSignatureAccessToken());
-    }
-    public function generateSignatureNotify(Request $request)
-    {
-        return response()->json(
-            $this->qrisService->generateSignatureNotify(
-                $request
-            )
-        );
     }
 }

@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Kasir;
 
 use App\Http\Controllers\Controller;
-use App\Libraries\Medinfras\KasirService;
 use App\Models\MedinTagihanModel;
+use App\Services\Medinfras\KasirService;
 use App\Traits\MessageResponseTrait;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -116,7 +116,29 @@ class KasirPembayaranController extends Controller
                     'Remarks' => $data['remarks'] ? $data['remarks'] : '',
                     'CardType' => $data['cardType'], // "001", //X102
                     'CardProvider' => $data['cardProvider'], // "009", //X142
-                    'EDCMachineCode' => $data['machineCode']// "EDC005",
+                    'EDCMachineCode' => $data['machineCode'] // "EDC005",
+                    /**Card Type */
+                    // X102^001', 'Debit Card'
+                    // X102^002', 'Visa'
+                    // X102^003', 'Master'
+                    // X102^008', 'QR/QRIS'
+                    // X102^999', 'Other'
+                    /**Card Provider */
+
+                    // X142^003, BRI
+                    // X142^009, CIMB Niaga
+
+                    /**EDC Machine */
+                    // EDC005, NIAGA-RI
+                    // EDC006, NIAGA RI 2
+                    // EDC007, NIAGA RI 3
+                    // EDC008, NIAGA-PSP
+                    // EDC009, NIAGA-KOS
+                    // EDC010, NIAGA-ADM
+                    // EDC013, BRI-RI
+                    // EDC014, BRI RI 2
+                    // EDC015, BRI-PSP
+
                 ]
             ];
 

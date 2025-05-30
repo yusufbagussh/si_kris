@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Kasir;
 
 use App\Http\Controllers\Controller;
-use App\Libraries\Medinfras\KasirService;
 use App\Models\MedinTagihanModel;
+use App\Services\Medinfras\KasirService;
 use App\Traits\MessageResponseTrait;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;

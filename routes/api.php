@@ -1,9 +1,8 @@
 <?php
 
-use App\Http\Controllers\APM\EDC\ECRLinkController;
+use App\Http\Controllers\APM\EDC\EDCController;
 use App\Http\Controllers\APM\QRIS\QRISController;
 use App\Http\Controllers\APM\QRIS\QRISNotificationController;
-use App\Http\Controllers\Kasir\KasirCetakanController;
 use App\Http\Controllers\Kasir\KasirMainController;
 use App\Http\Controllers\Kasir\KasirPembayaranController;
 use App\Http\Controllers\Kasir\KasirTagihanController;
@@ -30,23 +29,29 @@ Route::post('/snap/list/payment-info', [QRISController::class, 'getListInfoPatie
 Route::post('/snap/v1.0/access-token/b2b', [QRISNotificationController::class, 'generateToken']);
 Route::post('/snap/v1.1/qr/qr-mpm-notify', [QRISNotificationController::class, 'paymentNotification']);
 
-//Generate Token & Signature
-Route::post('/snap/generate/signature-token', [QRISController::class, 'getSignatureToken']);
-Route::post('/snap/generate/signature-notify', [QRISController::class, 'generateSignatureNotify']);
+//Generate Token & Signature For Notification
+Route::post('/snap/generate/signature-token', [QRISNotificationController::class, 'generateSignatureToken']);
+Route::post('/snap/generate/signature-notify', [QRISNotificationController::class, 'generateSignatureNotify']);
 
-Route::prefix('/apm/ecrlink')->group(function () {
-    Route::post('/sale', [ECRLinkController::class, 'sale'])->name('ecrlink.sale');
-    Route::post('/contactless', [ECRLinkController::class, 'contactless'])->name('ecrlink.contactless');
-    Route::post('/void', [ECRLinkController::class, 'void'])->name('ecrlink.void');
-    Route::post('/chech-status-qr', [ECRLinkController::class, 'chech-status-qr'])->name('ecrlink.chech-status-qr');
-    Route::post('/refund-qr', [ECRLinkController::class, 'refund-qr'])->name('ecrlink.refund-qr');
-    Route::post('/last-print', [ECRLinkController::class, 'last-print'])->name('ecrlink.last-print');
-    Route::post('/print-any', [ECRLinkController::class, 'print-any'])->name('ecrlink.print-any');
-    Route::post('/settlement', [ECRLinkController::class, 'settlement'])->name('ecrlink.settlement');
-});
+Route::prefix('apm')->group(function () {
+    Route::prefix('qris')->group(function () {
+        Route::post('generate-qr', [QRISController::class, 'generateQrPatient'])->name('qris.generate-qr');
+        Route::post('query-payment', [QRISController::class, 'inquiryPaymentPatient'])->name('qris.inquiry');
+        Route::post('list/payment-info', [QRISController::class, 'getListInfoPatientPayment'])->name('qris.notification');
+    });
 
-Route::group(['prefix' => 'medinfras'], function () {
-    Route::group(['prefix' => 'outpatient'], function () {
+    Route::prefix('edc')->group(function () {
+        Route::post('sale', [EDCController::class, 'sale'])->name('ecrlink.sale');
+        Route::post('contactless', [EDCController::class, 'contactless'])->name('ecrlink.contactless');
+        Route::post('void', [EDCController::class, 'void'])->name('ecrlink.void');
+        Route::post('chech-status-qr', [EDCController::class, 'chech-status-qr'])->name('ecrlink.chech-status-qr');
+        Route::post('refund-qr', [EDCController::class, 'refund-qr'])->name('ecrlink.refund-qr');
+        Route::post('last-print', [EDCController::class, 'last-print'])->name('ecrlink.last-print');
+        Route::post('print-any', [EDCController::class, 'print-any'])->name('ecrlink.print-any');
+        Route::post('settlement', [EDCController::class, 'settlement'])->name('ecrlink.settlement');
+    });
+
+    Route::prefix('medinfras')->group(function () {
         Route::post('clinic', [KasirMainController::class, 'klinikRawatJalan']);
         Route::post('doctor', [KasirMainController::class, 'dokterRawatJalan']);
         Route::post('payment-info', [KasirMainController::class, 'kasirRajalPembayaranInfo']);
