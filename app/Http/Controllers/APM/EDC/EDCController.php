@@ -365,12 +365,11 @@ class EDCController extends Controller
             ]);
 
             $edcPayment = $this->edcPayment->findPatientPayment($request->registration_no, $request->billing_list);
-
             if ($edcPayment) {
-                if (!in_array($edcPayment->status, ['paid', 'refund'])) {
+                if ($edcPayment->status == 'paid') {
                     dispatch(new EDCJob($data));
                 } else {
-                    return $this->fail_msg_res('Cannot void a payment that has already been paid or refunded.');
+                    return $this->fail_msg_res('Bill has not been paid yet, cannot proceed with void operation.');
                 }
             } else {
                 return $this->fail_msg_res('No payment record found for the provided registration number and billing list.');
