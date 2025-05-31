@@ -301,12 +301,12 @@ class QRISNotificationController extends Controller
                 $transaction->load(['patientPayment.patientPaymentDetail']);
 
                 $data = [
-                    "registrationNo" => $transaction->patientPayment->registration_no,
+                    "registration_no" => $transaction->patientPayment->registration_no,
                     "remarks" => "Pembayaran melalui {$request->input('AdditionalInfo.issuerName')} oleh {$request->destinationAccountName}",
-                    "referenceNo" => $transaction->original_reference_no,
-                    "transactionStatusDesc" => $request->transactionStatusDesc,
-                    "issuerName" => $request->input('AdditionalInfo.issuerName'),
-                    "paymentAmount" => intval($request->input('amount.value')),
+                    "reference_no" => $transaction->original_reference_no,
+                    "status" => $request->transactionStatusDesc,
+                    "issuer_name" => $request->input('AdditionalInfo.issuerName'),
+                    "payment_amount" => intval($request->input('amount.value')),
                 ];
 
                 $billingList = [];
@@ -315,7 +315,7 @@ class QRISNotificationController extends Controller
                     $billingList[] = "{$detail->billing_no}-{$billingAmount}";
                 }
 
-                $data['billList'] = implode(',', $billingList);
+                $data['bill_list'] = implode(',', $billingList);
 
                 $headersWebhook = [
                     'Content-Type' => 'application/json',
