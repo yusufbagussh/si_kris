@@ -307,6 +307,12 @@ class QRISNotificationController extends Controller
                     "status" => $request->transactionStatusDesc,
                     "issuer_name" => $request->input('AdditionalInfo.issuerName'),
                     "payment_amount" => intval($request->input('amount.value')),
+                    "card_type" => "001", //Debit Card
+                    "card_provider" =>"003", //BRI
+                    "machine_code" =>"EDC013", //BRI
+                    "bank_code" => "007", //BRI
+                    "shift" => "001", //Pagi
+                    "cashier_group" => "012", //KASIR RAWAT JALAN
                 ];
 
                 $billingList = [];
