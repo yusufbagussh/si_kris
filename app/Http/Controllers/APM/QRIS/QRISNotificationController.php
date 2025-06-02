@@ -22,6 +22,7 @@ class QRISNotificationController extends Controller
     private $briPublicKey;
     private $apmWebhookUrl;
     private $apmWebhookSecret;
+    private $apmWebhookApiKey;
 
     private QrisToken $qrisToken;
 
@@ -34,11 +35,11 @@ class QRISNotificationController extends Controller
         $this->briClientSecret = config('qris.partners.bri.webhook.client_secret');
         $this->briPublicKey = config('qris.partners.bri.webhook.public_key');
 
-        $this->apmWebhookUrl = config('qris.soba.webhook.url');
-        $this->apmWebhookSecret = config('qris.soba.webhook.secret');
+        $this->apmWebhookUrl = config('qris.notify.webhook.url');
+        $this->apmWebhookSecret = config('qris.notify.webhook.secret');
+        $this->apmWebhookApiKey = config('qris.notify.webhook.api_key');
 
         $this->qrisToken = new QrisToken();
-
         $this->qrisNotificationService = new QRISNotificationService();
     }
 
@@ -269,6 +270,11 @@ class QRISNotificationController extends Controller
             }
 
             $data = $request->all();
+            $timeStamp = now()->format('Y-m-d H:i:s');
+            $endPoint = '/api/apm/qris/generate-qr';
+            $hashString = strtolower(hash("sha256", json_encode($data)));
+            $stringToSign = "POST|$endPoint|$hashString|$timeStamp";
+            $signature = hash_hmac('sha512', $stringToSign, $this->apmWebhookSecret);
             $headers = [
                 'x-signature' => $request->header('x-signature') ?? null,
                 'x-timestamp' => $request->header('x-timestamp') ?? null,
@@ -281,7 +287,8 @@ class QRISNotificationController extends Controller
                 'x-longitude' => $request->header('x-longitude') ?? null,
                 'channel-id' => $request->header('channel-id') ?? null,
                 'content-type' => 'application/json',
-                'x-signature' => hash_hmac('sha256', json_encode($data), $this->apmWebhookSecret),
+                'x-signature' => $signature,
+                'x-api-key' => $this->apmWebhookApiKey,
             ];
 
             $this->processPayment($headers, $request->all());

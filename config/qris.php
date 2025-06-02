@@ -1,9 +1,10 @@
 <?php
 return [
-    'soba' => [
+    'notify' => [
         'webhook' => [
-            'url' => env('APM_WEBHOOK_URL'),
-            'secret' => env('APM_WEBHOOK_SECRET'),
+            'url' => env('NOTIFY_WEBHOOK_URL'),
+            'secret' => env('NOTIFY_WEBHOOK_SECRET'),
+            'api_key' => env('NOTIFY_WEBHOOK_API_KEY'),
         ],
     ],
     /*
