@@ -23,7 +23,6 @@ class QRISNotificationController extends Controller
     private $apmWebhookUrl;
     private $apmWebhookSecret;
 
-    private QrisPayment $qrisPayment;
     private QrisToken $qrisToken;
 
     private $qrisNotificationService;
@@ -38,7 +37,6 @@ class QRISNotificationController extends Controller
         $this->apmWebhookUrl = config('qris.soba.webhook.url');
         $this->apmWebhookSecret = config('qris.soba.webhook.secret');
 
-        $this->qrisPayment = new QrisPayment();
         $this->qrisToken = new QrisToken();
 
         $this->qrisNotificationService = new QRISNotificationService();
@@ -270,17 +268,7 @@ class QRISNotificationController extends Controller
                 return response()->json($response, 400);
             }
 
-            $transaction = $this->qrisPayment->where('partner_reference_no', $request->originalPartnerReferenceNo)->first();
-
-            if ($transaction == null) {
-                $response = [
-                    'responseCode' => '4045200',
-                    'responseMessage' => 'Transaction Not Found. Invalid Number'
-                ];
-                Log::info('Payment Notify Response', ['status' => 404, 'response' => $response]);
-                return response()->json($response, 404);
-            }
-
+            $data = $request->all();
             $headers = [
                 'x-signature' => $request->header('x-signature') ?? null,
                 'x-timestamp' => $request->header('x-timestamp') ?? null,
@@ -292,54 +280,15 @@ class QRISNotificationController extends Controller
                 'x-latitude' => $request->header('x-latitude') ?? null,
                 'x-longitude' => $request->header('x-longitude') ?? null,
                 'channel-id' => $request->header('channel-id') ?? null,
+                'content-type' => 'application/json',
+                'x-signature' => hash_hmac('sha256', json_encode($data), $this->apmWebhookSecret),
             ];
 
-            $this->processPayment($headers, $request->all(), $transaction);
+            $this->processPayment($headers, $request->all());
 
-            // Jika status transaksi adalah sukses, kirimkan notifikasi ke webhook Internal
-            if ($request->transactionStatusDesc == 'success') {
-                $transaction->load(['patientPayment.patientPaymentDetail']);
-
-                $data = [
-                    "registration_no" => $transaction->patientPayment->registration_no,
-                    "remarks" => "Pembayaran melalui {$request->input('AdditionalInfo.issuerName')} oleh {$request->destinationAccountName}",
-                    "reference_no" => $transaction->original_reference_no,
-                    "status" => $request->transactionStatusDesc,
-                    "issuer_name" => $request->input('AdditionalInfo.issuerName'),
-                    "payment_amount" => intval($request->input('amount.value')),
-                    "card_type" => "001", //Debit Card
-                    "card_provider" =>"003", //BRI
-                    "machine_code" =>"EDC013", //BRI
-                    "bank_code" => "007", //BRI
-                    "shift" => "001", //Pagi
-                    "cashier_group" => "012", //KASIR RAWAT JALAN
-                ];
-
-                $billingList = [];
-                foreach ($transaction->patientPayment->patientPaymentDetail as $detail) {
-                    $billingAmount = intval($detail->billing_amount);
-                    $billingList[] = "{$detail->billing_no}-{$billingAmount}";
-                }
-
-                $data['bill_list'] = implode(',', $billingList);
-
-                $headersWebhook = [
-                    'Content-Type' => 'application/json',
-                    'X-Signature' =>  hash_hmac('sha256', json_encode($data), $this->apmWebhookSecret),
-                ];
-
-                Log::info('Callback APM Request', [
-                    'headers' => $headersWebhook,
-                    'data' => $data,
-                ]);
-
-                $response = Http::withHeaders($headersWebhook)->post($this->apmWebhookUrl, $data);
-
-                Log::info('Callback APM Response', [
-                    'status' => $response->status(),
-                    'response' => $response->json()
-                ]);
-            }
+            Http::withHeaders([
+                $headers
+            ])->post($this->apmWebhookUrl, $data);
 
             $response = [
                 'responseCode' => '2005200',
@@ -416,50 +365,30 @@ class QRISNotificationController extends Controller
     /**
      * Proses pembayaran
      */
-    private function processPayment(array $headers, $paymentData, $transaction)
+    private function processPayment(array $headers, $notificationData)
     {
         $data = [
-            'qris_transaction_id' => $transaction->id,
-            'original_reference_no' => $paymentData['originalReferenceNo'],
-            'partner_reference_no' => $paymentData['originalPartnerReferenceNo'],
+            'original_reference_no' => $notificationData['originalReferenceNo'],
+            'partner_reference_no' => $notificationData['originalPartnerReferenceNo'],
             'external_id' => $headers['x-external-id'],
-            'latest_transaction_status' => $paymentData['latestTransactionStatus'] ?? null,
-            'transaction_status_desc' => $paymentData['transactionStatusDesc'] ?? null,
-            'customer_number' => $paymentData['customerNumber'],
-            'account_type' => $paymentData['accountType'] ?? null,
-            'destination_account_name' => $paymentData['destinationAccountName'],
-            'amount' => $paymentData['amount']['value'],
-            'currency' => $paymentData['amount']['currency'],
-            'bank_code' => $paymentData['bankCode'] ?? null,
-            'session_id' => $paymentData['sessionID'] ?? null,
-            'external_store_id' => $paymentData['externalStoreID'] ?? null,
-            'reff_id' => $paymentData['AdditionalInfo']['ReffId'] ?? null,
-            'issuer_name' => $paymentData['AdditionalInfo']['issuerName'] ?? null,
-            'issuer_rrn' => $paymentData['AdditionalInfo']['issuerRrn'] ?? null,
-            'raw_request' => json_encode($paymentData),
+            'latest_transaction_status' => $notificationData['latestTransactionStatus'] ?? null,
+            'transaction_status_desc' => $notificationData['transactionStatusDesc'] ?? null,
+            'customer_number' => $notificationData['customerNumber'],
+            'account_type' => $notificationData['accountType'] ?? null,
+            'destination_account_name' => $notificationData['destinationAccountName'],
+            'amount' => $notificationData['amount']['value'],
+            'currency' => $notificationData['amount']['currency'],
+            'bank_code' => $notificationData['bankCode'] ?? null,
+            'session_id' => $notificationData['sessionID'] ?? null,
+            'external_store_id' => $notificationData['externalStoreID'] ?? null,
+            'reff_id' => $notificationData['AdditionalInfo']['ReffId'] ?? null,
+            'issuer_name' => $notificationData['AdditionalInfo']['issuerName'] ?? null,
+            'issuer_rrn' => $notificationData['AdditionalInfo']['issuerRrn'] ?? null,
+            'raw_request' => json_encode($notificationData),
             'raw_header' => json_encode($headers),
         ];
         // Simpan data pembayaran ke database
         QrisNotification::create($data);
-
-        $statusMap = [
-            '00' => 'SUCCESS',
-            '01' => 'INITIATED',
-            '02' => 'PAYING',
-            '03' => 'PENDING',
-            '04' => 'REFUNDED',
-            '05' => 'CANCELED',
-            '06' => 'FAILED',
-            '07' => 'NOT_FOUND',
-        ];
-
-        //Update data QRIS Transaction
-        $status = $statusMap[$paymentData['latestTransactionStatus']] ?? 'UNKNOWN';
-        $transaction->status = $status;
-        if ($status == 'SUCCESS') {
-            $transaction->paid_at = now();
-        }
-        $transaction->save();
     }
 
     public function generateSignatureToken()
