@@ -4,10 +4,10 @@ namespace App\Http\Controllers\APM\EDC;
 
 use App\Http\Controllers\Controller;
 use App\Jobs\APM\EDC\EDCJob;
+use App\Services\BRI\EDCService;
 use App\Models\EdcPayment;
 use App\Models\PatientPayment;
 use App\Models\PatientPaymentDetail;
-use App\Services\BRI\EDCService;
 use App\Traits\MessageResponseTrait;
 use Exception;
 use Illuminate\Http\Request;
@@ -30,14 +30,10 @@ class EDCController extends Controller
     public function __construct()
     {
         // Load EDC configuration from environment variables
-        $edcAddress = config('edc.edc_address');
-        $posAddress = config('edc.pos_address');
-        $isSecure = config('edc.secure', false);
-
         $this->apmWebhookSecret = config('edc.webhook_secret');
         $this->apmWebhookBaseUrl = config('edc.webhook_url');
 
-        $this->ecrLinkService = new EDCService($edcAddress, $posAddress, $isSecure);
+        $this->ecrLinkService = new EDCService();
         $this->patientPayment = new PatientPayment();
         $this->patientPaymentDetail = new PatientPaymentDetail();
         $this->edcPayment = new EdcPayment();
@@ -109,7 +105,7 @@ class EDCController extends Controller
         try {
             $data = [
                 'registration_no' => $request->registration_no,
-                'amount' => $request->amount,
+                'amount' => $request->total_amount,
                 'method' => $request->method,
                 'action' => trim($request->action),
                 'request' => $request->all(),
@@ -289,7 +285,7 @@ class EDCController extends Controller
             // Get validated data from request
             $data = [
                 'registration_no' => $request->registration_no,
-                'amount' => $request->amount,
+                'amount' => $request->total_amount,
                 'method' => $request->method,
                 'action' => $request->action,
                 'request' => $request->all(),
@@ -365,11 +361,12 @@ class EDCController extends Controller
             ]);
 
             $edcPayment = $this->edcPayment->findPatientPayment($request->registration_no, $request->billing_list);
+
             if ($edcPayment) {
-                if ($edcPayment->status == 'paid') {
+                if (!in_array($edcPayment->status, ['paid', 'refund'])) {
                     dispatch(new EDCJob($data));
                 } else {
-                    return $this->fail_msg_res('Bill has not been paid yet, cannot proceed with void operation.');
+                    return $this->fail_msg_res('Cannot void a payment that has already been paid or refunded.');
                 }
             } else {
                 return $this->fail_msg_res('No payment record found for the provided registration number and billing list.');

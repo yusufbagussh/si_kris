@@ -1,6 +1,9 @@
 <?php
 return [
     'soba' => [
+        env('SOBA_ID') => [
+            'secret_key' => env('SOBA_SECRET_KEY'),
+        ],
         'webhook' => [
             'url' => env('APM_WEBHOOK_URL'),
             'secret' => env('APM_WEBHOOK_SECRET'),

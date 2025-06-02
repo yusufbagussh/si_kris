@@ -6,6 +6,7 @@ use App\Models\EdcPayment;
 use App\Models\PatientPayment;
 use App\Models\PatientPaymentDetail;
 use App\Services\BRI\EDCService;
+use Exception;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -31,14 +32,7 @@ class EDCJob implements ShouldQueue
     {
         // Load EDC configuration from environment variables
         $this->data = $data;
-
-        // Initialize EDCService with configuration
-        $this->ecrLinkService = new EDCService(
-            config('edc.edc_address'),
-            config('edc.pos_address'),
-            config('edc.secure', false)
-        );
-
+        $this->ecrLinkService = new EDCService();
         $this->apmWebhookSecret = config('edc.webhook_secret');
         $this->apmWebhookBaseUrl = config('edc.webhook_url');
     }
@@ -127,26 +121,58 @@ class EDCJob implements ShouldQueue
         return $patientPayment;
     }
 
+    private function generateGeneralResponse($response)
+    {
+        return [
+            'method' => $response['method'],
+            'action' => $response['action'],
+            'status' => $response['status'],
+            'message' => $response['msg'],
+            'trx_id' => $response['trx_id'] ?? null,
+            'reference_number' => $response['reference_number'] ?? null,
+            'reff_id' => $response['reff_id'] ?? null,
+            'trace_number' => $response['trace_number'] ?? null,
+            'payment_method_code' => $this->checkPaymentMethod($response['method']),
+        ];
+    }
+
+    private function generatePaymentResponse($response, $registrationNo, $billingList)
+    {
+        return [
+            'registration_no' => $registrationNo,
+            'billing_list' => $billingList,
+            'remarks' => "Pembayaran melalui {$response['method']} dengan jumlah Rp{$response['amount']},00",
+            'reference_no' => $response['reference_number'],
+            'status' => $response['status'],
+            'message' => $response['msg'],
+            'amount' => $response['amount'],
+            'issuer_name' => $response['method'],
+            'payment_method_code' => $this->checkPaymentMethod($response['method']),
+        ];
+    }
+
     private function sendToWebhook($patientPayment, $response)
     {
-        $method = $response['card_category'] != 'N/A' ?? $response['card_name'] != 'N/A' ?? 'Sobapay';
-        $data = [
-            "registration_no" => $patientPayment->registration_no,
-            "remarks" => "Pembayaran melalui {$method} dengan jumlah {$response['amount']}",
-            "reference_no" => $response['reference_number'],
-            "status" => $response['status'],
-            "message" => $response['msg'],
-            "amount" => $response['amount'],
-            "issuer_name" => $method
-        ];
+        $data = [];
+        if (in_array($response['action'], ['Sale', 'Contactless'])) {
 
-        $billingList = [];
-        foreach ($patientPayment->patientPaymentDetail as $detail) {
-            $billingAmount = intval($detail->billing_amount);
-            $billingList[] = "{$detail->billing_no}-{$billingAmount}";
+            $billingList = [];
+            foreach ($patientPayment->patientPaymentDetail as $detail) {
+                $billingAmount = intval($detail->billing_amount);
+                $billingList[] = "{$detail->billing_no}-{$billingAmount}";
+            }
+
+            $data['billList'] = implode(',', $billingList);
+
+            $data = $this->generatePaymentResponse(
+                $response,
+                $patientPayment->registration_no,
+                $billingList
+            );
+        } else {
+            $data =  $this->generateGeneralResponse($response);
         }
 
-        $data['billList'] = implode(',', $billingList);
 
         $headersWebhook = [
             'Content-Type' => 'application/json',
