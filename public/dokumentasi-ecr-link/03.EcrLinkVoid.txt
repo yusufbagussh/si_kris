@@ -1,0 +1,76 @@
+VOID
+SUCCESS RESPONSE
+{
+    "acq_mid": "000001999115921",
+    "acq_tid": "10362515",
+    "action": "Void",
+    "amount": "1",
+    "approval": "007548",
+    "batch_number": "00005",
+    "card_category": "VISA BRI",
+    "card_name": "VISA",
+    "card_type": "CHIP",
+    "edc_address": "192.168.5.104",
+    "is_credit": "N/A",
+    "is_off_us": "N/A",
+    "method": "purchase",
+    "msg": "Transaction Success",
+    "pan": "4359 7202 **** 0107",
+    "pos_address": "172.0.0.1",
+    "rc": "00",
+    "reference_number": "000021000059",
+    "status": "success",
+    "trace_number": "000059",
+    "transaction_date": "2023-09-11 15:01:57"
+}
+
+ERROR RESPONSE
+- failed jika trace number salah
+{
+    "acq_mid": "000001999115921",
+    "acq_tid": "10362515",
+    "action": "Void",
+    "amount": "N/A",
+    "approval": "N/A",
+    "batch_number": "N/A",
+    "card_category": "N/A",
+    "card_name": "N/A",
+    "card_type": "N/A",
+    "edc_address": "192.168.5.104",
+    "is_credit": "N/A",
+    "is_off_us": "N/A",
+    "method": "N/A",
+    "msg": "Data Tidak Ada",
+    "pan": "N/A",
+    "pos_address": "172.0.0.1",
+    "rc": "N/A",
+    "reference_number": "N/A",
+    "status": "failed",
+    "trace_number": "N/A",
+    "transaction_date": "N/A"
+}
+
+- failed jika transaksi telah divoid
+{
+"acq_mid": "000001999115921",
+"acq_tid": "10362516",
+"action": "Void",
+"amount": "1",
+"approval": "008534",
+"batch_number": "00001",
+"card_category": "VISA BRI",
+"card_name": "VISA",
+"card_type": "CHIP",
+"edc_address": "192.168.5.214",
+"is_credit": "N/A",
+"is_off_us": "N/A",
+"method": "purchase",
+"msg": "Transaksi telah divoid",
+"pan": "4359 7202 **** 0107",
+"pos_address": "172.0.0.1",
+"rc": "null null",
+"reference_number": "000021000003",
+"status": "failed",
+"trace_number": "000002",
+"transaction_date": "2023-09-21 11:15:51"
+}

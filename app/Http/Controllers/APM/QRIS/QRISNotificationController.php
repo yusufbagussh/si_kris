@@ -1,31 +1,47 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\APM\QRIS;
 
+use App\Events\QrisNotificationEvent;
+use App\Http\Controllers\Controller;
 use App\Models\QrisNotification;
+use App\Models\QrisPayment;
 use App\Models\QrisToken;
-use App\Models\QrisTransaction;
+use App\Services\BRI\QRISNotificationService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 
-class QRISNotifyController extends Controller
+class QRISNotificationController extends Controller
 {
     private $briClientKey;
     private $briClientSecret;
-    private $briPublicKeyPath;
     private $briPartnerId;
     private $briPublicKey;
+    private $apmWebhookUrl;
+    private $apmWebhookSecret;
+
+    private QrisPayment $qrisPayment;
+    private QrisToken $qrisToken;
+
+    private $qrisNotificationService;
 
     public function __construct()
     {
-        $this->briPartnerId = config('qris.clients.bri.partner_id');
-        $this->briClientKey = config('qris.clients.bri.client_id');
-        $this->briClientSecret = config('qris.clients.bri.client_secret');
-        $this->briPublicKeyPath = storage_path('app/public/keys/public_key.pem');
-        $this->briPublicKey = config('qris.clients.bri.public_key');
+        $this->briPartnerId = config('qris.partners.bri.webhook.partner_id');
+        $this->briClientKey = config('qris.partners.bri.webhook.client_id');
+        $this->briClientSecret = config('qris.partners.bri.webhook.client_secret');
+        $this->briPublicKey = config('qris.partners.bri.webhook.public_key');
+
+        $this->apmWebhookUrl = config('qris.soba.webhook.url');
+        $this->apmWebhookSecret = config('qris.soba.webhook.secret');
+
+        $this->qrisPayment = new QrisPayment();
+        $this->qrisToken = new QrisToken();
+
+        $this->qrisNotificationService = new QRISNotificationService();
     }
 
     /**
@@ -40,7 +56,7 @@ class QRISNotifyController extends Controller
             foreach ($requiredHeaders as $header) {
                 if (!$request->header($header)) {
                     return response()->json([
-                        'responseCode' => '5201',
+                        'responseCode' => '4007302',
                         'responseMessage' => "Invalid Mandatory Field: Header $header missing"
                     ], 400);
                 }
@@ -88,7 +104,7 @@ class QRISNotifyController extends Controller
             if ($validator->fails()) {
                 return response()->json([
                     'responseCode' => '4007301',
-                    'responseMessage' => 'Invalid Field Format'
+                    'responseMessage' => 'Invalid Field Format Grant Type'
                 ], 400);
             }
 
@@ -103,10 +119,10 @@ class QRISNotifyController extends Controller
                 'expiresIn' => (string)$expiresIn
             ], 200);
         } catch (\Exception $e) {
-            Log::error('Error in token generation: ' . $e->getMessage());
+            Log::error('[' . $e->getCode() . '][generateToken] ' . $e->getMessage());
             return response()->json([
                 'responseCode' => '500000',
-                'responseMessage' => 'General Error : ' . $e->getMessage()
+                'responseMessage' => 'General Error'
             ], 500);
         }
     }
@@ -117,11 +133,6 @@ class QRISNotifyController extends Controller
     private function saveToken($token, $clientKey, $expiresIn)
     {
         $expiration = now()->addSeconds($expiresIn);
-        //Cache::put("qris_token_{$token}", [
-        //    'client_key' => $clientKey,
-        //    'expires_at' => $expiration
-        //], $expiration);
-
         QrisToken::create([
             'token' => $token,
             'client_key' => $clientKey,
@@ -139,18 +150,22 @@ class QRISNotifyController extends Controller
 
             $authHeader = $request->header('Authorization');
             if (!$authHeader || !Str::startsWith($authHeader, 'Bearer ')) {
-                return response()->json([
+                $response = [
                     'responseCode' => '4017301',
                     'responseMessage' => 'Invalid Token (B2B)'
-                ], 401);
+                ];
+                Log::info('Payment Notify Response', ['status' => 401, 'response' => $response]);
+                return response()->json($response, 401);
             }
 
             $token = Str::substr($authHeader, 7);
             if (!$this->validateToken($token)) {
-                return response()->json([
+                $response = [
                     'responseCode' => '4017301',
                     'responseMessage' => 'Invalid Token (B2B)'
-                ], 401);
+                ];
+                Log::info('Payment Notify Response', ['status' => 401, 'response' => $response]);
+                return response()->json($response, 401);
             }
 
             $requiredHeaders = [
@@ -162,10 +177,12 @@ class QRISNotifyController extends Controller
 
             foreach ($requiredHeaders as $header) {
                 if (!$request->header($header)) {
-                    return response()->json([
+                    $response = [
                         'responseCode' => '4005202',
                         'responseMessage' => "Invalid Mandatory Field: Header $header missing"
-                    ], 400);
+                    ];
+                    Log::info('Payment Notify Response', ['status' => 400, 'response' => $response]);
+                    return response()->json($response, 400);
                 }
             }
 
@@ -173,10 +190,12 @@ class QRISNotifyController extends Controller
                 '/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})[+-](\d{2}):(\d{2})$/',
                 $request->header('X-TIMESTAMP')
             ) !== 1) {
-                return response()->json([
+                $response = [
                     'responseCode' => '4005201',
                     'responseMessage' => 'Invalid Field Format: timestamp must be in ISO 8601 format'
-                ], 400);
+                ];
+                Log::info('Payment Notify Response', ['status' => 400, 'response' => $response]);
+                return response()->json($response, 400);
             }
 
             $validatorExternalID = Validator::make($request->header(), [
@@ -184,17 +203,24 @@ class QRISNotifyController extends Controller
             ]);
 
             if ($validatorExternalID->fails()) {
-                return response()->json([
+                $response = [
                     'responseCode' => '4095200',
                     'responseMessage' => 'conflict'
-                ], 409);
+                ];
+                Log::info('Payment Notify Response', ['status' => 409, 'response' => $response]);
+                return response()->json($response, 409);
             }
 
+            Log::info("CLIENT SECRET REQUEST: " . $this->briClientSecret);
+
+
             if (!$this->verifyNotificationSignature($request)) {
-                return response()->json([
+                $response = [
                     'responseCode' => '4017300',
                     'responseMessage' => 'Unauthorized Signature'
-                ], 401);
+                ];
+                Log::info('Payment Notify Response', ['status' => 401, 'response' => $response]);
+                return response()->json($response, 401);
             }
 
             $requiredFields = [
@@ -207,18 +233,22 @@ class QRISNotifyController extends Controller
 
             foreach ($requiredFields as $field) {
                 if (!$request->has($field)) {
-                    return response()->json([
+                    $response = [
                         'responseCode' => '4005202',
                         'responseMessage' => "Invalid Mandatory Field: $field"
-                    ], 400);
+                    ];
+                    Log::info('Payment Notify Response', ['status' => 400, 'response' => $response]);
+                    return response()->json($response, 400);
                 }
             }
 
             if (!$request->has('amount.value') || !$request->has('amount.currency')) {
-                return response()->json([
+                $response = [
                     'responseCode' => '4005202',
                     'responseMessage' => 'Invalid Mandatory Field in amount object'
-                ], 400);
+                ];
+                Log::info('Payment Notify Response', ['status' => 400, 'response' => $response]);
+                return response()->json($response, 400);
             }
 
             // Validate required fields
@@ -232,19 +262,23 @@ class QRISNotifyController extends Controller
             ]);
 
             if ($validator->fails()) {
-                return response()->json([
+                $response = [
                     'responseCode' => '4005201',
                     'responseMessage' => 'Invalid Field Format: ' . implode(', ', $validator->errors()->all())
-                ], 400);
+                ];
+                Log::info('Payment Notify Response', ['status' => 400, 'response' => $response]);
+                return response()->json($response, 400);
             }
 
-            $transaction = QrisTransaction::where('partner_reference_no', $request->originalPartnerReferenceNo)->first();
+            $transaction = $this->qrisPayment->where('partner_reference_no', $request->originalPartnerReferenceNo)->first();
 
             if ($transaction == null) {
-                return response()->json([
+                $response = [
                     'responseCode' => '4045200',
                     'responseMessage' => 'Transaction Not Found. Invalid Number'
-                ], 404);
+                ];
+                Log::info('Payment Notify Response', ['status' => 404, 'response' => $response]);
+                return response()->json($response, 404);
             }
 
             $headers = [
@@ -260,20 +294,73 @@ class QRISNotifyController extends Controller
                 'channel-id' => $request->header('channel-id') ?? null,
             ];
 
-            $this->processPayment($headers, $request->all());
+            $this->processPayment($headers, $request->all(), $transaction);
 
-            return response()->json([
+            // Jika status transaksi adalah sukses, kirimkan notifikasi ke webhook Internal
+            if ($request->transactionStatusDesc == 'success') {
+                $transaction->load(['patientPayment.patientPaymentDetail']);
+
+                $data = [
+                    "registration_no" => $transaction->patientPayment->registration_no,
+                    "remarks" => "Pembayaran melalui {$request->input('AdditionalInfo.issuerName')} oleh {$request->destinationAccountName}",
+                    "reference_no" => $transaction->original_reference_no,
+                    "status" => $request->transactionStatusDesc,
+                    "issuer_name" => $request->input('AdditionalInfo.issuerName'),
+                    "payment_amount" => intval($request->input('amount.value')),
+                    "card_type" => "001", //Debit Card
+                    "card_provider" =>"003", //BRI
+                    "machine_code" =>"EDC013", //BRI
+                    "bank_code" => "007", //BRI
+                    "shift" => "001", //Pagi
+                    "cashier_group" => "012", //KASIR RAWAT JALAN
+                ];
+
+                $billingList = [];
+                foreach ($transaction->patientPayment->patientPaymentDetail as $detail) {
+                    $billingAmount = intval($detail->billing_amount);
+                    $billingList[] = "{$detail->billing_no}-{$billingAmount}";
+                }
+
+                $data['bill_list'] = implode(',', $billingList);
+
+                $headersWebhook = [
+                    'Content-Type' => 'application/json',
+                    'X-Signature' =>  hash_hmac('sha256', json_encode($data), $this->apmWebhookSecret),
+                ];
+
+                Log::info('Callback APM Request', [
+                    'headers' => $headersWebhook,
+                    'data' => $data,
+                ]);
+
+                $response = Http::withHeaders($headersWebhook)->post($this->apmWebhookUrl, $data);
+
+                Log::info('Callback APM Response', [
+                    'status' => $response->status(),
+                    'response' => $response->json()
+                ]);
+            }
+
+            $response = [
                 'responseCode' => '2005200',
                 'responseMessage' => 'Successfull',
-                'additionalInfo' => $request->additionalInfo ?? []
-            ], 200);
-        } catch (\Exception $e) {
-            Log::error('Payment Notify Error', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+                'additionalInfo' => [
+                    'reffId' => $request->input('AdditionalInfo.ReffId') ?? null,
+                    'issuerName' => $request->input('AdditionalInfo.issuerName') ?? null,
+                    'issuerRrn' => $request->input('AdditionalInfo.issuerRrn') ?? null,
+                ] ?? []
+            ];
 
-            return response()->json([
+            Log::info('Payment Notify Response', ['status' => 200, 'response' => $response]);
+            return response()->json($response, 200);
+        } catch (\Exception $e) {
+            Log::error('[' . $e->getCode() . '][generateToken] ' . $e->getMessage());
+            $response = [
                 'responseCode' => '5005200',
                 'responseMessage' => 'General Error'
-            ], 500);
+            ];
+            Log::info('Payment Notify Response', ['status' => 500, 'response' => $response]);
+            return response()->json($response, 500);
         }
     }
 
@@ -282,17 +369,7 @@ class QRISNotifyController extends Controller
      */
     private function validateToken($token)
     {
-        // Pilihan 1: Validasi menggunakan cache
-        $tokenData = Cache::get("qris_token_{$token}");
-        if ($tokenData) {
-            return true;
-        }
-
-        // Pilihan 2: Validasi menggunakan database
-        $tokenRecord = QrisToken::where('token', $token)
-            ->where('expires_at', '>', now())
-            ->first();
-
+        $tokenRecord = $this->qrisToken->checkExpiredToken($token);
         return $tokenRecord !== null;
     }
 
@@ -318,12 +395,9 @@ class QRISNotifyController extends Controller
 
             // Buat string to sign (sama seperti di generateSignature)
             $method = 'POST';
-            $endpoint = '/snap/v1.1/qr/qr-mpm-notify';
-            $hashedBody = strtolower(hash('sha256', $requestBody));
+            $endpoint = '/api/snap/v1.1/qr/qr-mpm-notify';
+            $hashedBody = bin2hex(strtolower(hash('sha256', $requestBody)));
             $stringToSign = "$method:$endpoint:$token:$hashedBody:$timestamp";
-
-            Log::info("StringToSign (Verification): " . $stringToSign);
-            Log::info("KEY HMAC: " . $this->briClientSecret);
 
             // Buat signature lokal untuk dibandingkan
             $expectedSignature = base64_encode(hash_hmac('sha512', $stringToSign, $this->briClientSecret, true));
@@ -338,83 +412,18 @@ class QRISNotifyController extends Controller
             return false;
         }
     }
-    // private function verifyNotificationSignature(Request $request)
-    // {
-    //     try {
-    //         $partnerId = $request->header('X-PARTNER-ID');
-    //         $timestamp = $request->header('X-TIMESTAMP');
-    //         $signature = $request->header('X-SIGNATURE');
-    //         $token = Str::substr($request->header('Authorization'), 7);
-
-    //         // Dapatkan partner berdasarkan partner ID
-    //         // $partners = config('qris.partners');
-    //         // if (!isset($partners[$partnerId])) {
-    //         if ($this->briPartnerId != $partnerId) {
-    //             Log::error("Unknown partner ID: $partnerId");
-    //             return false;
-    //         }
-
-    //         // $partnerInfo = $partners[$partnerId];
-
-    //         // Buat string to sign sesuai dokumentasi
-    //         $method = 'POST';
-    //         $endpoint = '/snap/v1.1/qr/qr-mpm-notify';
-
-    //         // Hash request body
-    //         $requestBody = json_encode($request->all());
-    //         $bodyHash = strtolower(hash('sha256', $requestBody));
-
-    //         // String to sign
-    //         $stringToSign = "$method:$endpoint:$token:$bodyHash:$timestamp";
-
-    //         // Verifikasi signature
-    //         // $publicKey = openssl_pkey_get_public($partnerInfo['public_key']);
-    //         $briPublicKeyContent = file_get_contents($this->briPublicKeyPath);
-    //         $publicKey = openssl_pkey_get_public($briPublicKeyContent);
-    //         if (!$publicKey) {
-    //             Log::error("Failed to get public key for partner: $partnerId");
-    //             return false;
-    //         }
-
-    //         $isVerified = openssl_verify(
-    //             $stringToSign,
-    //             base64_decode($signature),
-    //             // $this->briClientSecret,
-    //             $publicKey,
-    //             OPENSSL_ALGO_SHA256
-    //         );
-
-    //         return $isVerified === 1;
-    //     } catch (\Exception $e) {
-    //         Log::error('Error in signature verification: ' . $e->getMessage());
-    //         return false;
-    //     }
-    // }
 
     /**
      * Proses pembayaran
      */
-    private function processPayment(array $headers, $paymentData)
+    private function processPayment(array $headers, $paymentData, $transaction)
     {
-        Log::info('Payment notification received', [
-            'ref_no' => $paymentData['originalReferenceNo'],
-            'partner_ref_no' => $paymentData['originalPartnerReferenceNo'],
-            'status' => $paymentData['latestTransactionStatus'] ?? 'Not provided',
-            'amount' => $paymentData['amount']['value'],
-            'currency' => $paymentData['amount']['currency']
-        ]);
-
-        $transactionId = null;
-        $transaction = QrisTransaction::where('reference_no', $paymentData['originalReferenceNo'])->first();
-        if ($transaction != null) {
-            $transactionId = $transaction->id;
-        }
-
         $data = [
-            'qris_transaction_id' => $transactionId,
-            'reference_no' => $paymentData['originalReferenceNo'],
+            'qris_transaction_id' => $transaction->id,
+            'original_reference_no' => $paymentData['originalReferenceNo'],
             'partner_reference_no' => $paymentData['originalPartnerReferenceNo'],
-            'transaction_status' => $paymentData['latestTransactionStatus'] ?? null,
+            'external_id' => $headers['x-external-id'],
+            'latest_transaction_status' => $paymentData['latestTransactionStatus'] ?? null,
             'transaction_status_desc' => $paymentData['transactionStatusDesc'] ?? null,
             'customer_number' => $paymentData['customerNumber'],
             'account_type' => $paymentData['accountType'] ?? null,
@@ -422,18 +431,48 @@ class QRISNotifyController extends Controller
             'amount' => $paymentData['amount']['value'],
             'currency' => $paymentData['amount']['currency'],
             'bank_code' => $paymentData['bankCode'] ?? null,
-            //'additional_info' => json_encode($paymentData['additionalInfo'] ?? []),
-            'raw_data' => json_encode($paymentData),
+            'session_id' => $paymentData['sessionID'] ?? null,
+            'external_store_id' => $paymentData['externalStoreID'] ?? null,
+            'reff_id' => $paymentData['AdditionalInfo']['ReffId'] ?? null,
+            'issuer_name' => $paymentData['AdditionalInfo']['issuerName'] ?? null,
+            'issuer_rrn' => $paymentData['AdditionalInfo']['issuerRrn'] ?? null,
+            'raw_request' => json_encode($paymentData),
             'raw_header' => json_encode($headers),
-            'external_id' => $headers['x-external-id'],
         ];
         // Simpan data pembayaran ke database
         QrisNotification::create($data);
 
-        // Di sini Anda bisa tambahkan logika bisnis lainnya
-        // Misalnya: memperbarui status pesanan, mengirim notifikasi, dll.
-        /*
-         * Code here
-         */
+        $statusMap = [
+            '00' => 'SUCCESS',
+            '01' => 'INITIATED',
+            '02' => 'PAYING',
+            '03' => 'PENDING',
+            '04' => 'REFUNDED',
+            '05' => 'CANCELED',
+            '06' => 'FAILED',
+            '07' => 'NOT_FOUND',
+        ];
+
+        //Update data QRIS Transaction
+        $status = $statusMap[$paymentData['latestTransactionStatus']] ?? 'UNKNOWN';
+        $transaction->status = $status;
+        if ($status == 'SUCCESS') {
+            $transaction->paid_at = now();
+        }
+        $transaction->save();
+    }
+
+    public function generateSignatureToken()
+    {
+        return response()->json($this->qrisNotificationService->generateSignatureAccessToken());
+    }
+
+    public function generateSignatureNotify(Request $request)
+    {
+        return response()->json(
+            $this->qrisNotificationService->generateSignatureNotify(
+                $request
+            )
+        );
     }
 }

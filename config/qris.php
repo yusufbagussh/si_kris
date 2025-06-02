@@ -1,44 +1,46 @@
 <?php
 return [
-    /*
-    |--------------------------------------------------------------------------
-    | Data Client (Partner yang Terhubung ke API Anda)
-    |--------------------------------------------------------------------------
-    |
-    | Informasi tentang client yang diizinkan untuk mengakses API Anda
-    | client_key : Adalah nama PJP sebagai identifier client
-    | public_key : Kunci publik untuk verifikasi signature
-    |
-    */
-    'clients' => [
-        'bri' => [
-            'client_id' => env('BRI_CLIENT_ID'),
-            'client_secret' => env('BRI_CLIENT_SECRET'),
-            'partner_id' => env('BRI_PARTNER_ID'),
-            'public_key' => file_get_contents(storage_path('app/private/keys/public_key.pem')),
-            'private_key' => file_get_contents(storage_path('app/private/keys/private_key.pem')),
-            'description' => 'Deskripsi Client'
+    'soba' => [
+        'webhook' => [
+            'url' => env('APM_WEBHOOK_URL'),
+            'secret' => env('APM_WEBHOOK_SECRET'),
         ],
     ],
-
     /*
     |--------------------------------------------------------------------------
     | Data Partner (Bank BRI dalam hal ini)
     |--------------------------------------------------------------------------
     |
-    | Informasi tentang partner yang akan melakukan callback ke API Anda
-    | partner_id : ID Partner yang diberikan oleh partner
-    | public_key : Kunci publik untuk verifikasi signature
-    |
+    | Informasi tentang client yang diizinkan untuk mengakses API Anda
     */
     'partners' => [
-        'PARTNER_ID_FROM_BRI' => [
-            'public_key' => '-----BEGIN PUBLIC KEY-----
-MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA...
------END PUBLIC KEY-----',
-            'description' => 'Bank BRI'
+        'bri' => [
+            'base_url' => env('QRIS_BASE_URL', 'https://api.bri.co.id/'),
+            'client_id' => env('QRIS_CLIENT_ID'),
+            'client_secret' => env('QRIS_CLIENT_SECRET'),
+            'partner_id' => env('QRIS_PARTNER_ID'),
+            'channel_id' => env('QRIS_CHANNEL_ID'),
+            'terminal_id' => env('QRIS_TERMINAL_ID'),
+            'merchant_id' => env('QRIS_MERCHANT_ID'),
+            'public_key' => file_get_contents(storage_path('app/private/keys/public_key.pem')), //Local
+            'private_key' => file_get_contents(storage_path('app/private/keys/private_key.pem')),
+            'webhook' => [
+                'client_id' => env('BRI_CLIENT_ID'),
+                'client_secret' => env('BRI_CLIENT_SECRET'),
+                'partner_id' => env('BRI_PARTNER_ID'),
+                'public_key' => file_get_contents(storage_path('app/private/keys/bri/droensolo.Pub.pem')), //Public Key BRI V1
+                // 'public_key' => file_get_contents(storage_path('app/private/keys/bri/private_key_droenSoloBaru.pub.pem')), //Public Key BRI V1
+            ]
         ],
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Data Client (Partner yang Terhubung ke API Anda)
+    |--------------------------------------------------------------------------
+    |
+    | Informasi tentang partner yang akan melakukan callback ke API Anda
+    */
 
     /*
     |--------------------------------------------------------------------------

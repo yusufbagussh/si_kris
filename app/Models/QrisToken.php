@@ -20,4 +20,11 @@ class QrisToken extends Model
     protected $casts = [
         'expires_at' => 'datetime'
     ];
+
+    function checkExpiredToken($token)
+    {
+        return $this->where('token', $token)
+            ->where('expires_at', '>', now())
+            ->exists();
+    }
 }

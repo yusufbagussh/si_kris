@@ -31,4 +31,13 @@ class QrisBriToken extends Model
     protected $casts = [
         'expires_at' => 'datetime',
     ];
+
+    function getAccessToken()
+    {
+        $token = $this->where('expires_at', '>', now())
+            ->latest()
+            ->first();
+
+        return $token ? $token->token : null;
+    }
 }

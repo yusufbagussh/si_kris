@@ -1,0 +1,82 @@
+CONTACTLESS
+SUCCESS RESPONSE
+{
+    "acq_mid": "000001999115921",
+    "acq_tid": "10362515",
+    "action": "Refund Qris",
+    "amount": "1",
+    "approval": "N/A",
+    "batch_number": "N/A",
+    "card_category": "N/A",
+    "card_name": "N/A",
+    "card_type": "SCAN",
+    "edc_address": "192.168.5.104",
+    "is_credit": "N/A",
+    "is_off_us": "N/A",
+    "method": "QRIS",
+    "msg": "refund berhasil",
+    "pan": "N/A",
+    "pos_address": "172.0.0.1",
+    "rc": "00",
+    "reference_number": "000005549778",
+    "reff_id": "2094989537",
+    "status": "paid",
+    "trace_number": "20",
+    "transaction_date": "2023-09-11 11:36:55"
+}
+
+- failed (reff_id salah)
+{
+    "acq_mid": "000001999115921",
+    "acq_tid": "10362515",
+    "action": "Refund Qris",
+    "amount": "N/A",
+    "approval": "N/A",
+    Respond Sample
+    "batch_number": "N/A",
+    (Error)
+    "card_category": "N/A",
+    "card_name": "N/A",
+    "card_type": "SCAN",
+    "edc_address": "192.168.5.104",
+    "is_credit": "N/A",
+    "is_off_us": "N/A",
+    "method": "QRIS",
+    "msg": "Transaction not found",
+    "pan": "N/A",
+    "pos_address": "172.0.0.1",
+    "rc": "N/A",
+    "reference_number": "N/A",
+    "reff_id": "N/A",
+    "status": "failed",
+    "trace_number": "N/A",
+    "transaction_date": "N/A"
+}
+
+- failed (Transaksi telah di-refund)
+{
+    "acq_mid": "000001999115921",
+    "acq_tid": "10362515",
+    "action": "Refund Qris",
+    "amount": "1",
+    "approval": "N/A",
+    "batch_number": "N/A",
+    "card_category": "N/A",
+    "card_name": "N/A",
+    "card_type": "SCAN",
+    "edc_address": "192.168.5.104",
+    "is_credit": "N/A",
+    "is_off_us": "N/A",
+    "method": "QRIS",
+    "msg": "Transaksi telah di refund",
+    "pan": "N/A",
+    "pos_address": "172.0.0.1",
+    "rc": "00",
+    "reference_number": "000005549778",
+    "reff_id": "2094989537",
+    44
+    ECRLink PCS
+    "status": "paid",
+    "trace_number": "20",
+    "transaction_date": "2023-09-11 11:36:55"
+}

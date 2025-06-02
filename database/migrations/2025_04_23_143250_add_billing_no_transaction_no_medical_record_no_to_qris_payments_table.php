@@ -10,8 +10,8 @@ return new class extends Migration {
      */
     public function up(): void
     {
-        Schema::table('qris_notifications', function (Blueprint $table) {
-            $table->text('raw_header')->nullable()->after('raw_data');
+        Schema::table('qris_payments', function (Blueprint $table) {
+            $table->string('medical_record_no')->nullable();
         });
     }
 
@@ -20,8 +20,8 @@ return new class extends Migration {
      */
     public function down(): void
     {
-        Schema::table('qris_notifications', function (Blueprint $table) {
-            $table->dropColumn('raw_header');
+        Schema::table('qris_payments', function (Blueprint $table) {
+            $table->dropColumn('medical_record_no');
         });
     }
 };

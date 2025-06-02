@@ -1,0 +1,51 @@
+CONTACTLESS
+SUCCESS RESPONSE
+{
+    "acq_mid": "000001999115921",
+    "acq_tid": "10362515",
+    "action": "Reprint Any",
+    "amount": "1",
+    "approval": "E488663A",
+    "batch_number": "00001",
+    "card_category": "N/A",
+    "card_name": "N/A",
+    "card_type": "Tap",
+    "edc_address": "192.168.5.104",
+    "is_credit": "N/A",
+    "is_off_us": "N/A",
+    "method": "brizzi",
+    "msg": "transaksi berhasil dicetak",
+    "pan": "N/A",
+    "pos_address": "172.0.0.1",
+    "rc": "N/A",
+    "reference_number": "000002",
+    "status": "success",
+    "trace_number": "2",
+    "transaction_date": "2023-09-11 15:21:25"
+}
+
+ERROR
+- failed jika data tidak ada
+{
+    "acq_mid": "000001999115921",
+    "acq_tid": "10362515",
+    "action": "Reprint Any",
+    "amount": "N/A",
+    "approval": "N/A",
+    "batch_number": "N/A",
+    "card_category": "N/A",
+    "card_name": "N/A",
+    "card_type": "N/A",
+    "edc_address": "192.168.5.104",
+    "is_credit": "N/A",
+    "is_off_us": "N/A",
+    "method": "N/A",
+    "msg": "Transaction Not Found",
+    "pan": "N/A",
+    "pos_address": "172.0.0.1",
+    "rc": "N/A",
+    "reference_number": "N/A",
+    "status": "failed",
+    "trace_number": "N/A",
+    "transaction_date": "N/A"
+}

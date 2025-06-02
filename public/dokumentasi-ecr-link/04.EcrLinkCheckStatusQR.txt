@@ -1,0 +1,106 @@
+CONTACTLESS
+SUCCESS RESPONSE
+- Cek Status Qris Pay
+{
+    "acq_mid": "000001999115921",
+    "acq_tid": "10362515",
+    "action": "Check Status",
+    "amount": "1",
+    "approval": "N/A",
+    "batch_number": "N/A",
+    "card_category": "N/A",
+    "card_name": "N/A",
+    "card_type": "SCAN",
+    "edc_address": "192.168.5.104",
+    "is_credit": "N/A",
+    "is_off_us": "N/A",
+    "method": "QRIS",
+    "msg": "transaksi berhasil",
+    "pan": "N/A",
+    "pos_address": "172.0.0.1",
+    "rc": "N/A",
+    "reference_number": "000005519810",
+    "reff_id": "2094987443",
+    "status": "paid",
+    "trace_number": "18",
+    "transaction_date": "2023-09-11 11:32:49"
+}
+
+- Cek Status Qris Refund
+{
+    "acq_mid": "000001999115921",
+    "acq_tid": "10362515",
+    "action": "Check Status",
+    "amount": "1",
+    "approval": "N/A",
+    "batch_number": "N/A",
+    "card_category": "N/A",
+    "card_name": "N/A",
+    "card_type": "SCAN",
+    "edc_address": "192.168.5.104",
+    "is_credit": "N/A",
+    "is_off_us": "N/A",
+    "method": "QRIS",
+    "msg": "transaksi refund",
+    "pan": "N/A",
+    "pos_address": "172.0.0.1",
+    "rc": "N/A",
+    "reference_number": "000005638614",
+    "reff_id": "2094996304",
+    "status": "refund",
+    "trace_number": "23",
+    "transaction_date": "2023-09-11 11:49:00"
+}
+
+ERROR RESPONSE
+- failed (QR unpaid)
+{
+"acq_mid": "000001999115921",
+"acq_tid": "10362515",
+"action": "Check Status",
+"amount": "1",
+"approval": "N/A",
+"batch_number": "N/A",
+"card_category": "N/A",
+"card_name": "N/A",
+"card_type": "SCAN",
+"edc_address": "192.168.5.104",
+"is_credit": "N/A",
+"is_off_us": "N/A",
+"method": "QRIS",
+"msg": "Transaksi Unpaid",
+"pan": "N/A",
+"pos_address": "172.0.0.1",
+"rc": "N/A",
+"reference_number": "000005667265",
+"reff_id": "N/A",
+"status": "unpaid",
+"trace_number": "25",
+"transaction_date": "2023-09-11 11:53:16"
+}
+
+- failed (reference_number salah)
+{
+    "acq_mid": "000001999115921",
+    "acq_tid": "10362515",
+    "action": "Check Status",
+    "amount": "N/A",
+    "approval": "N/A",
+    "batch_number": "N/A",
+    "card_category": "N/A",
+    "card_name": "N/A",
+    "card_type": "SCAN",
+    "edc_address": "192.168.5.104",
+    "is_credit": "N/A",
+    "is_off_us": "N/A",
+    "method": "QRIS",
+    "msg": "Transaksi tidak ditemukan",
+    "pan": "N/A",
+    "pos_address": "172.0.0.1",
+    "rc": "N/A",
+    "reference_number": "N/A",
+    "reff_id": "N/A",
+    "status": "failed",
+    "trace_number": "N/A",
+    "transaction_date": "N/A"
+}
