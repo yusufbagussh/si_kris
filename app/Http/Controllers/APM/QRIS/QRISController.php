@@ -12,6 +12,7 @@ use App\Services\BRI\QRISService;
 use App\Traits\MessageResponseTrait;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 
@@ -65,6 +66,8 @@ class QRISController extends Controller
         if ($validator->fails()) {
             return $this->fail_msg_res($validator->errors());
         }
+
+        Log::info('[' . __METHOD__ . '] Request Data: ', $request->all());
 
         try {
             $token = $this->qrisBriToken->getAccessToken() ?? $this->getAccessToken();
@@ -342,5 +345,83 @@ class QRISController extends Controller
             'issuer_rrn' => $response['additionalInfo']['issuerRrn'] ?? null,
             'mpan' => $response['additionalInfo']['mpan'] ?? null,
         ]);
+    }
+
+    private const QRIS_API_URL = 'http://127.0.0.1:8000/api/apm/qris/generate-qr';
+    /**
+     * Generate QRIS dengan data default (untuk testing)
+     */
+    public function generateQrisTest()
+    {
+        $testData = [
+            'medical_record_no' => '34-56-34-45',
+            'registration_no' => 'OPR/20250531/00001',
+            'billing_list' => [
+                [
+                    'billing_no' => 'OPB/20250531/00001',
+                    'billing_amount' => '90'
+                ],
+                [
+                    'billing_no' => 'OPB/20250531/00002',
+                    'billing_amount' => '60'
+                ]
+            ],
+            'total_amount' => '150',
+            'payment_method' => '021'
+        ];
+
+        try {
+            $timeStamp = now()->format('Y-m-d H:i:s');
+            $endPoint = '/api/apm/qris/generate-qr';
+            $hashString = strtolower(hash("sha256", json_encode($testData)));
+            $stringToSign = "POST|$endPoint|$hashString|$timeStamp";
+            Log::info('stringToSign' . $stringToSign);
+            $signature = hash_hmac('sha512', $stringToSign, env('SOBA_SECRET_KEY'));
+            Log::info('secretKey' . env('SOBA_SECRET_KEY'));
+            $headers = [
+                'Content-Type' => 'application/json',
+                'X-Timestamp' => $timeStamp,
+                'X-API-Key' => env('SOBA_ID', '620220'),
+                'X-Signature' => $signature,
+            ];
+
+            $response = Http::withHeaders($headers)
+                ->timeout(30)
+                ->acceptJson()
+                ->post(self::QRIS_API_URL, $testData);
+
+            Log::info('QRIS Test API Request', [
+                'url' => self::QRIS_API_URL,
+                'data' => $testData,
+                'response_status' => $response->status(),
+                'response_body' => $response->body()
+            ]);
+
+            if ($response->successful()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'QRIS QR code generated successfully (test)',
+                    'data' => $response->json()
+                ], 200);
+            } else {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to generate QRIS QR code (test)',
+                    'error' => $response->body(),
+                    'status_code' => $response->status()
+                ], $response->status());
+            }
+        } catch (\Exception $e) {
+            Log::error('QRIS Test API Error', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'An error occurred while generating QRIS QR code (test)',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 }
