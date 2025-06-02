@@ -375,9 +375,10 @@ class EDCService
      */
     private function sendWebSocketRequest(array $data): array
     {
+        $endPoint = $this->connectionConfig['edc_address'] == 'localhost' ? '/app/qwerty' : '';
         $encryptedData = $this->encryptData(json_encode($data));
         $protocol = $this->connectionConfig['secure'] ? 'wss' : 'ws';
-        $uri = "$protocol://{$this->connectionConfig['edc_address']}:{$this->connectionConfig['port']}/app/qwerty";
+        $uri = "$protocol://{$this->connectionConfig['edc_address']}:{$this->connectionConfig['port']}$endPoint";
 
         Log::info('Connecting to ECRLink', [
             'uri' => $uri,
