@@ -64,7 +64,8 @@ class QRISService
     {
         $partnerReferenceNo = $this->generatePartnerReferenceNoFromReg($registrationNo);
         $timestamp = $this->timeStamp;
-        $endpoint = "/snap/v1.1/qr/qr-mpm-generate";
+        //  $endpoint = "/snap/v1.1/qr/qr-mpm-generate";
+        $endpoint = "/v1.1/qr-dynamic-mpm/qr-mpm-generate-qr";
 
         $formattedAmount = number_format($totalAmount, 2, '.', '');
         $body = [
@@ -85,6 +86,11 @@ class QRISService
 
         $response = Http::withHeaders($headers)->post($this->baseUrl . $endpoint, $body);
 
+        Log::info("INFO RESPONSE GEN-QR QRIS BRIS :", [
+            'response' => $response->json(),
+            'status' => $response->status()
+        ]);
+
         if (!$response->successful()) {
             Log::error('Failed to generate QR', [
                 'response' => $response->json(),
@@ -98,7 +104,8 @@ class QRISService
     public function inquiryPayment($token, $originalReferenceNo)
     {
         $timestamp = $this->timeStamp;
-        $endpoint = "/snap/v1.1/qr/qr-mpm-query";
+        // $endpoint = "/snap/v1.1/qr/qr-mpm-query";
+        $endpoint = "/v1.1/qr-dynamic-mpm/qr-mpm-query";
 
         $body = [
             'originalReferenceNo' => $originalReferenceNo,
@@ -109,14 +116,17 @@ class QRISService
         ];
 
         $headers = $this->getAuthHeaders($token, $endpoint, $body, $timestamp);
-        //Log::info("INFO REQUEST INQUIRY QRIS BRIS : ", [
-        //    'headers' => $headers,
-        //    'body' => $body,
-        //]);
+        Log::info("INFO REQUEST INQUIRY QRIS BRIS : ", [
+            'headers' => $headers,
+            'body' => $body,
+        ]);
 
         $response = Http::withHeaders($headers)->post($this->baseUrl . $endpoint, $body);
-        //Log::info("INFO RESPONSE INQUIRY QRIS BRIS");
-        //Log::info("response : " . $response);
+        Log::info("INFO RESPONSE INQUIRY QRIS BRIS : ", [
+            'response' => $response->json(),
+            'status' => $response->status()
+        ]);
+
         if (!$response->successful()) {
             Log::error('Failed to query payment', [
                 'response' => $response->json(),
