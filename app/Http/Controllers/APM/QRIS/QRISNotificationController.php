@@ -294,49 +294,49 @@ class QRISNotificationController extends Controller
             $this->processPayment($headers, $request->all(), $transaction);
 
             // Jika status transaksi adalah sukses, kirimkan notifikasi ke webhook Internal
-            if ($request->transactionStatusDesc == 'success') {
-                $transaction->load(['patientPayment.patientPaymentDetail']);
+            // if ($request->transactionStatusDesc == 'success') {
+            //     $transaction->load(['patientPayment.patientPaymentDetail']);
 
-                $data = [
-                    "registration_no" => $transaction->patientPayment->registration_no,
-                    "remarks" => "Pembayaran melalui {$request->input('AdditionalInfo.issuerName')} oleh {$request->destinationAccountName}",
-                    "reference_no" => $transaction->original_reference_no,
-                    "status" => $request->transactionStatusDesc,
-                    "issuer_name" => $request->input('AdditionalInfo.issuerName'),
-                    "payment_amount" => intval($request->input('amount.value')),
-                    "card_type" => "001", //Debit Card
-                    "card_provider" => "003", //BRI
-                    "machine_code" => "EDC013", //BRI
-                    "bank_code" => "007", //BRI
-                    "shift" => "001", //Pagi
-                    "cashier_group" => "012", //KASIR RAWAT JALAN
-                ];
+            //     $data = [
+            //         "registration_no" => $transaction->patientPayment->registration_no,
+            //         "remarks" => "Pembayaran melalui {$request->input('AdditionalInfo.issuerName')} oleh {$request->destinationAccountName}",
+            //         "reference_no" => $transaction->original_reference_no,
+            //         "status" => $request->transactionStatusDesc,
+            //         "issuer_name" => $request->input('AdditionalInfo.issuerName'),
+            //         "payment_amount" => intval($request->input('amount.value')),
+            //         "card_type" => "001", //Debit Card
+            //         "card_provider" => "003", //BRI
+            //         "machine_code" => "EDC013", //BRI
+            //         "bank_code" => "007", //BRI
+            //         "shift" => "001", //Pagi
+            //         "cashier_group" => "012", //KASIR RAWAT JALAN
+            //     ];
 
-                $billingList = [];
-                foreach ($transaction->patientPayment->patientPaymentDetail as $detail) {
-                    $billingAmount = intval($detail->billing_amount);
-                    $billingList[] = "{$detail->billing_no}-{$billingAmount}";
-                }
+            //     $billingList = [];
+            //     foreach ($transaction->patientPayment->patientPaymentDetail as $detail) {
+            //         $billingAmount = intval($detail->billing_amount);
+            //         $billingList[] = "{$detail->billing_no}-{$billingAmount}";
+            //     }
 
-                $data['bill_list'] = implode(',', $billingList);
+            //     $data['bill_list'] = implode(',', $billingList);
 
-                $headersWebhook = [
-                    'Content-Type' => 'application/json',
-                    'X-Signature' =>  hash_hmac('sha256', json_encode($data), $this->apmWebhookSecret),
-                ];
+            //     $headersWebhook = [
+            //         'Content-Type' => 'application/json',
+            //         'X-Signature' =>  hash_hmac('sha256', json_encode($data), $this->apmWebhookSecret),
+            //     ];
 
-                Log::info('Callback APM Request', [
-                    'headers' => $headersWebhook,
-                    'data' => $data,
-                ]);
+            //     Log::info('Callback APM Request', [
+            //         'headers' => $headersWebhook,
+            //         'data' => $data,
+            //     ]);
 
-                $response = Http::withHeaders($headersWebhook)->post($this->apmWebhookUrl, $data);
+            //     $response = Http::withHeaders($headersWebhook)->post($this->apmWebhookUrl, $data);
 
-                Log::info('Callback APM Response', [
-                    'status' => $response->status(),
-                    'response' => $response->json()
-                ]);
-            }
+            //     Log::info('Callback APM Response', [
+            //         'status' => $response->status(),
+            //         'response' => $response->json()
+            //     ]);
+            // }
 
             $response = [
                 'responseCode' => '2005200',
