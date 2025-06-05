@@ -140,9 +140,6 @@ class QRISNotificationController extends Controller
         ]);
     }
 
-    /**
-     * Handle notifikasi pembayaran dari BRI
-     */
     public function paymentNotification(Request $request)
     {
         try {
@@ -308,8 +305,8 @@ class QRISNotificationController extends Controller
                     "issuer_name" => $request->input('AdditionalInfo.issuerName'),
                     "payment_amount" => intval($request->input('amount.value')),
                     "card_type" => "001", //Debit Card
-                    "card_provider" =>"003", //BRI
-                    "machine_code" =>"EDC013", //BRI
+                    "card_provider" => "003", //BRI
+                    "machine_code" => "EDC013", //BRI
                     "bank_code" => "007", //BRI
                     "shift" => "001", //Pagi
                     "cashier_group" => "012", //KASIR RAWAT JALAN
@@ -363,6 +360,105 @@ class QRISNotificationController extends Controller
             return response()->json($response, 500);
         }
     }
+
+
+    public function receiveNotification(Request $request)
+    {
+        try {
+            $transaction = $this->qrisPayment->where('partner_reference_no', $request->originalPartnerReferenceNo)->first();
+
+            if ($transaction == null) {
+                $response = [
+                    'responseCode' => '4045200',
+                    'responseMessage' => 'Transaction Not Found. Invalid Number'
+                ];
+                Log::info('Payment Notify Response', ['status' => 404, 'response' => $response]);
+                return response()->json($response, 404);
+            }
+
+            $headers = [
+                'x-signature' => $request->header('x-signature') ?? null,
+                'x-timestamp' => $request->header('x-timestamp') ?? null,
+                'origin' => $request->header('origin') ?? null,
+                'x-partner-id' => $request->header('x-partner-id') ?? null,
+                'x-external-id' => $request->header('x-external-id') ?? null,
+                'x-ip-address' => $request->header('x-ip-address') ?? null,
+                'x-device-id' => $request->header('x-device-id') ?? null,
+                'x-latitude' => $request->header('x-latitude') ?? null,
+                'x-longitude' => $request->header('x-longitude') ?? null,
+                'channel-id' => $request->header('channel-id') ?? null,
+            ];
+
+            $this->processPayment($headers, $request->all(), $transaction);
+
+            // Jika status transaksi adalah sukses, kirimkan notifikasi ke webhook Internal
+            if ($request->transactionStatusDesc == 'success') {
+                $transaction->load(['patientPayment.patientPaymentDetail']);
+
+                $data = [
+                    "registration_no" => $transaction->patientPayment->registration_no,
+                    "remarks" => "Pembayaran melalui {$request->input('AdditionalInfo.issuerName')} oleh {$request->destinationAccountName}",
+                    "reference_no" => $transaction->original_reference_no,
+                    "status" => $request->transactionStatusDesc,
+                    "issuer_name" => $request->input('AdditionalInfo.issuerName'),
+                    "payment_amount" => intval($request->input('amount.value')),
+                    "card_type" => "001", //Debit Card
+                    "card_provider" => "003", //BRI
+                    "machine_code" => "EDC013", //BRI
+                    "bank_code" => "007", //BRI
+                    "shift" => "001", //Pagi
+                    "cashier_group" => "012", //KASIR RAWAT JALAN
+                ];
+
+                $billingList = [];
+                foreach ($transaction->patientPayment->patientPaymentDetail as $detail) {
+                    $billingAmount = intval($detail->billing_amount);
+                    $billingList[] = "{$detail->billing_no}-{$billingAmount}";
+                }
+
+                $data['bill_list'] = implode(',', $billingList);
+
+                $headersWebhook = [
+                    'Content-Type' => 'application/json',
+                    'X-Signature' =>  hash_hmac('sha256', json_encode($data), $this->apmWebhookSecret),
+                ];
+
+                Log::info('Callback APM Request', [
+                    'headers' => $headersWebhook,
+                    'data' => $data,
+                ]);
+
+                $response = Http::withHeaders($headersWebhook)->post($this->apmWebhookUrl, $data);
+
+                Log::info('Callback APM Response', [
+                    'status' => $response->status(),
+                    'response' => $response->json()
+                ]);
+            }
+
+            $response = [
+                'responseCode' => '2005200',
+                'responseMessage' => 'Successfull',
+                'additionalInfo' => [
+                    'reffId' => $request->input('AdditionalInfo.ReffId') ?? null,
+                    'issuerName' => $request->input('AdditionalInfo.issuerName') ?? null,
+                    'issuerRrn' => $request->input('AdditionalInfo.issuerRrn') ?? null,
+                ] ?? []
+            ];
+
+            Log::info('Payment Notify Response', ['status' => 200, 'response' => $response]);
+            return response()->json($response, 200);
+        } catch (\Exception $e) {
+            Log::error('[' . $e->getCode() . '][generateToken] ' . $e->getMessage());
+            $response = [
+                'responseCode' => '5005200',
+                'responseMessage' => 'General Error'
+            ];
+            Log::info('Payment Notify Response', ['status' => 500, 'response' => $response]);
+            return response()->json($response, 500);
+        }
+    }
+
 
     /**
      * Validasi token
@@ -474,5 +570,185 @@ class QRISNotificationController extends Controller
                 $request
             )
         );
+    }
+
+
+    /**
+     * Test fungsi paymentNotification dengan data static dan auto generate token
+     * Tambahkan method ini ke dalam QRISNotificationController
+     */
+    public function testPaymentNotification(Request $request)
+    {
+        try {
+            // Validasi input yang diperlukan
+            $validator = Validator::make($request->all(), [
+                'originalReferenceNo' => 'required|string',
+                'originalPartnerReferenceNo' => 'required|string',
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'error' => 'Validation failed',
+                    'messages' => $validator->errors()->all()
+                ], 400);
+            }
+
+            // Step 1: Generate token otomatis
+            $token = $this->generateTestTokenWithBypass();
+            if (!$token) {
+                return response()->json([
+                    'error' => 'Failed to generate test token'
+                ], 500);
+            }
+
+            // Step 2: Prepare static test data
+            $testData = [
+                'originalReferenceNo' => $request->input('originalReferenceNo'),
+                'originalPartnerReferenceNo' => $request->input('originalPartnerReferenceNo'),
+                'latestTransactionStatus' => '00', // SUCCESS
+                'transactionStatusDesc' => 'success',
+                'customerNumber' => '6281234567890',
+                'accountType' => 'SVGS',
+                'destinationAccountName' => 'TEST USER',
+                'amount' => [
+                    'value' => '1.00',
+                    'currency' => 'IDR'
+                ],
+                'bankCode' => '002',
+                'sessionID' => 'TEST_SESSION_' . time(),
+                'externalStoreID' => 'STORE001',
+                'AdditionalInfo' => [
+                    'ReffId' => 'REF_' . time(),
+                    'issuerName' => 'Bank BRI',
+                    'issuerRrn' => 'RRN' . time()
+                ]
+            ];
+
+            // Step 3: Prepare headers dengan signature yang valid
+            $headers = $this->generateTestHeaders($token, $testData);
+
+            // Step 4: Simulasi request ke paymentNotification
+            $testRequest = $this->createTestRequest($headers, $testData);
+
+            // Call the actual paymentNotification method
+            $response = $this->paymentNotification($testRequest);
+
+            // Return response dengan informasi tambahan untuk debugging
+            return response()->json([
+                'message' => 'Test payment notification executed',
+                'generated_token' => $token,
+                'test_data' => $testData,
+                'test_headers' => $headers,
+                'payment_response' => $response->getData(),
+                'payment_status_code' => $response->getStatusCode()
+            ]);
+        } catch (\Exception $e) {
+            Log::error('[testPaymentNotification] ' . $e->getMessage());
+            return response()->json([
+                'error' => 'Test failed',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Generate token untuk testing
+     */
+    /**
+     * Generate token dengan memodifikasi sementara verification untuk testing
+     */
+    private function generateTestTokenWithBypass()
+    {
+        try {
+            $timestamp = now()->toISOString();
+
+            // Create mock request untuk generateToken
+            $tokenRequest = new Request();
+            $tokenRequest->merge([
+                'grantType' => 'client_credentials'
+            ]);
+
+            $signature = $this->qrisNotificationService->generateSignatureAccessToken();
+
+            // Set headers dengan signature dummy
+            $tokenRequest->headers->set('X-CLIENT-KEY', $signature['X-CLIENT-KEY']);
+            $tokenRequest->headers->set('X-TIMESTAMP', $signature['X-TIMESTAMP']);
+            $tokenRequest->headers->set('X-SIGNATURE', $signature['X-SIGNATURE']);
+            $tokenRequest->headers->set('Content-Type', 'application/json');
+            $tokenRequest->headers->set('Accept', 'application/json');
+
+
+            // Call generateToken method
+            $tokenResponse = $this->generateToken($tokenRequest);
+
+            $responseData = json_decode($tokenResponse->getContent(), true);
+
+            if ($tokenResponse->getStatusCode() === 200 && isset($responseData['accessToken'])) {
+                return $responseData['accessToken'];
+            } else {
+                Log::error('Failed to generate token via generateToken method', [
+                    'status' => $tokenResponse->getStatusCode(),
+                    'response' => $responseData
+                ]);
+                return null;
+            }
+        } catch (\Exception $e) {
+            Log::error('Failed to generate test token with bypass: ' . $e->getMessage());
+            // Fallback to simple method
+            return $this->generateTestTokenSimple();
+        }
+    }
+    private function generateExternalId()
+    {
+        return (string)mt_rand(1000000000000000, 9999999999999999) . mt_rand(1000000000000000, 9999999999999999);
+    }
+
+    /**
+     * Generate headers untuk test dengan signature yang valid
+     */
+    private function generateTestHeaders($token, $testData)
+    {
+        $timestamp = now()->toIso8601String();; // Format ISO 8601
+        $externalId = $this->generateExternalId();
+
+        // Generate signature sesuai dengan algoritma di verifyNotificationSignature
+        $requestBody = json_encode($testData);
+        $method = 'POST';
+        $endpoint = '/api/snap/v1.1/qr/qr-mpm-notify';
+        $hashedBody = bin2hex(strtolower(hash('sha256', $requestBody)));
+        $stringToSign = "$method:$endpoint:$token:$hashedBody:$timestamp";
+        $signature = base64_encode(hash_hmac('sha512', $stringToSign, $this->briClientSecret, true));
+
+        return [
+            'Authorization' => 'Bearer ' . $token,
+            'X-SIGNATURE' => $signature,
+            'X-TIMESTAMP' => $timestamp,
+            'X-PARTNER-ID' => $this->briPartnerId,
+            'X-EXTERNAL-ID' => $externalId,
+            'Content-Type' => 'application/json',
+            'Accept' => 'application/json'
+        ];
+    }
+
+    /**
+     * Create mock request object untuk testing
+     */
+    private function createTestRequest($headers, $data)
+    {
+        // Create a new request instance
+        $request = new Request();
+
+        // Set the request data
+        $request->merge($data);
+
+        // Set headers
+        foreach ($headers as $key => $value) {
+            $request->headers->set($key, $value);
+        }
+
+        // Set method
+        $request->setMethod('POST');
+
+        return $request;
     }
 }
