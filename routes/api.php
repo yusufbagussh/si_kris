@@ -28,6 +28,7 @@ Route::post('/snap/list/payment-info', [QRISController::class, 'getListInfoPatie
 //Webhook Notification For BRI
 Route::post('/snap/v1.0/access-token/b2b', [QRISNotificationController::class, 'generateToken']);
 Route::post('/snap/v1.1/qr/qr-mpm-notify', [QRISNotificationController::class, 'paymentNotification']);
+Route::post('/snap/v1.1/qr/qr-mpm-notify/test', [QRISNotificationController::class, 'testPaymentNotification']);
 
 //Generate Token & Signature For Notification
 Route::post('/snap/generate/signature-token', [QRISNotificationController::class, 'generateSignatureToken']);
@@ -35,9 +36,11 @@ Route::post('/snap/generate/signature-notify', [QRISNotificationController::clas
 
 Route::prefix('apm')->group(function () {
     Route::prefix('qris')->group(function () {
-        Route::post('generate-qr', [QRISController::class, 'generateQrPatient'])->name('qris.generate-qr');
+        Route::post('generate-qr', [QRISController::class, 'generateQrPatient'])->name('qris.generate-qr')->middleware('api.verify_signature');
         Route::post('query-payment', [QRISController::class, 'inquiryPaymentPatient'])->name('qris.inquiry');
+        Route::post('notify', [QRISNotificationController::class, 'receiveNotification'])->name('qris.notify');
         Route::post('list/payment-info', [QRISController::class, 'getListInfoPatientPayment'])->name('qris.notification');
+        Route::post('test', [QRISController::class, 'generateQrisTest'])->name('qris.test');
     });
 
     Route::prefix('edc')->group(function () {
